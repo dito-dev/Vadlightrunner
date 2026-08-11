@@ -1673,8 +1673,11 @@
             if (!container) return;
             try {
                 const res = await fetch('/api/repos');
+                if (!res.ok) {
+                    throw new Error(`Server status ${res.status}`);
+                }
                 const repos = await res.json();
-                if (!repos || repos.length === 0) {
+                if (!Array.isArray(repos) || repos.length === 0) {
                     container.innerHTML = '<div style="color: var(--text-muted); font-size: 0.85rem; padding: 0.5rem; text-align: center;">No repositories added yet.</div>';
                     return;
                 }

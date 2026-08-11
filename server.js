@@ -102,9 +102,11 @@ app.get('/api/proxy/video', async (req, res) => {
 });
 app.use(express.static(path.join(__dirname, 'public')));
 
+const LOCAL_EXT_DIR = path.join(__dirname, 'extensions');
 const DATA_EXT_DIR = path.join(__dirname, 'data', 'extensions');
 
 const directories = {
+    'bundled': LOCAL_EXT_DIR,
     'development': path.join(__dirname, '../mangayomi-extensionsTEST/javascript/anime/src/en/working/'),
     'prod-safe': path.join(__dirname, '../prod_extension-main/working/'),
     'prod-nsfw': path.join(__dirname, '../yomiextensionreal-main/nsfw/'),
@@ -136,7 +138,7 @@ function initCache() {
     sourceCache.clear();
     for (const [group, dirPath] of Object.entries(directories)) {
         if (!fs.existsSync(dirPath)) {
-            console.warn(`Warning: Extension directory for group '${group}' does not exist: ${dirPath}`);
+            // Optional local development paths are skipped silently on production deployments
             continue;
         }
         const files = getJsFilesRecursive(dirPath);
@@ -220,8 +222,11 @@ function withTimeout(promise, timeoutMs = EXEC_TIMEOUT_MS, actionName = 'Action'
 
 // --- REST Endpoints ---
 
-// Healthcheck/Welcome
+// Healthcheck/Welcome & Root UI Route
 app.get('/', (req, res) => {
+    if (req.accepts('html')) {
+        return res.sendFile(path.join(__dirname, 'public', 'tester.html'));
+    }
     res.json({
         status: 'online',
         message: 'Mangayomi Extension Runner API is running',
