@@ -1,0 +1,1736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="referrer" content="no-referrer">
+    <title>VileStream Cloud Client</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Space+Grotesk:wght@400;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- HLS.js for .m3u8 streaming playback support in browsers -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <style>
+        :root {
+            --bg-color: #0b0914;
+            --card-bg: rgba(18, 16, 32, 0.7);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --text-color: #f3f4f6;
+            --text-muted: #9ca3af;
+            --primary: #8b5cf6;
+            --primary-glow: rgba(139, 92, 246, 0.4);
+            --accent: #d946ef;
+            --accent-glow: rgba(217, 70, 239, 0.3);
+            --success: #10b981;
+            --glass-blur: blur(12px);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Outfit', sans-serif;
+            scrollbar-width: thin;
+            scrollbar-color: var(--primary) var(--bg-color);
+        }
+
+        /* Custom Scrollbar */
+        *::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        *::-webkit-scrollbar-track {
+            background: var(--bg-color);
+        }
+        *::-webkit-scrollbar-thumb {
+            background-color: var(--primary);
+            border-radius: 3px;
+        }
+
+        body {
+            background: radial-gradient(circle at 50% 0%, #1c1535 0%, var(--bg-color) 70%);
+            color: var(--text-color);
+            min-height: 100vh;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            background: rgba(11, 9, 20, 0.95);
+            backdrop-filter: var(--glass-blur);
+            border-bottom: 1px solid var(--border-color);
+            padding: max(0.8rem, env(safe-area-inset-top, 12px)) 1.2rem 0.8rem 1.2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+
+        .header-bottom {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 0.8rem;
+            width: 100%;
+            flex-wrap: wrap;
+        }
+
+        .source-controls {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .logo {
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 700;
+            font-size: 1.4rem;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .logo i {
+            -webkit-text-fill-color: var(--primary);
+        }
+
+        .controls {
+            display: flex;
+            gap: 0.8rem;
+            align-items: center;
+            width: 100%;
+            flex-wrap: wrap;
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 0.4rem;
+            overflow-x: auto;
+            scrollbar-width: none;
+            -webkit-overflow-scrolling: touch;
+        }
+        .nav-tabs::-webkit-scrollbar {
+            display: none;
+        }
+
+        .nav-tabs button {
+            white-space: nowrap;
+            font-size: 0.85rem;
+            padding: 0.5rem 0.8rem;
+        }
+
+        .btn-subtle {
+            background: rgba(255, 255, 255, 0.05) !important;
+            border: 1px solid var(--border-color) !important;
+        }
+
+        select, input, button {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            padding: 0.5rem 0.8rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        select:focus, input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 10px var(--primary-glow);
+        }
+
+        select {
+            cursor: pointer;
+            background-color: #121020;
+        }
+
+        .search-box {
+            display: flex;
+            gap: 0.4rem;
+            flex: 1;
+            min-width: 180px;
+            max-width: 450px;
+        }
+
+        .search-box input {
+            flex-grow: 1;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px var(--primary-glow);
+        }
+
+        main {
+            flex-grow: 1;
+            padding: 1.5rem;
+            max-width: 1600px;
+            width: 100%;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 380px;
+            gap: 1.5rem;
+        }
+
+        @media (max-width: 1024px) {
+            main {
+                grid-template-columns: 1fr;
+                padding: 1rem;
+                gap: 1rem;
+            }
+            .sidebar {
+                display: none;
+            }
+            body.detail-active .sidebar {
+                display: flex;
+                flex-direction: column;
+                gap: 1rem;
+            }
+        }
+
+        @media (max-width: 600px) {
+            header {
+                padding: max(0.6rem, env(safe-area-inset-top, 8px)) 0.8rem 0.6rem 0.8rem;
+                gap: 0.6rem;
+            }
+            .logo {
+                font-size: 1.2rem;
+            }
+            #source-select {
+                max-width: 130px;
+                font-size: 0.8rem;
+                padding: 0.4rem 0.6rem;
+            }
+            .search-box {
+                min-width: 100%;
+            }
+            .anime-grid {
+                grid-template-columns: repeat(auto-fill, minmax(115px, 1fr)) !important;
+                gap: 0.75rem !important;
+            }
+            .anime-info-mini {
+                padding: 0.5rem !important;
+            }
+            .anime-title-mini {
+                font-size: 0.8rem !important;
+            }
+            .anime-year {
+                font-size: 0.7rem !important;
+            }
+        }
+
+        .content-area {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .section-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Anime Grid */
+        .anime-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .anime-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+
+        .anime-card:hover {
+            transform: scale(1.05);
+            border-color: var(--primary);
+            box-shadow: 0 10px 20px var(--primary-glow);
+        }
+
+        .anime-poster-wrapper {
+            position: relative;
+            padding-top: 140%;
+            overflow: hidden;
+        }
+
+        .anime-poster {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s ease;
+        }
+
+        .anime-card:hover .anime-poster {
+            transform: scale(1.1);
+        }
+
+        .anime-score {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(11, 9, 20, 0.85);
+            backdrop-filter: var(--glass-blur);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #fbbf24;
+            padding: 0.2rem 0.5rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.2rem;
+        }
+
+        .anime-info-mini {
+            padding: 0.8rem;
+        }
+
+        .anime-title-mini {
+            font-size: 0.95rem;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .anime-year {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 0.2rem;
+        }
+
+        /* Detail Panel */
+        .detail-panel {
+            background: var(--card-bg);
+            backdrop-filter: var(--glass-blur);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 1.5rem;
+            display: none;
+            flex-direction: column;
+            gap: 1.5rem;
+            animation: fadeIn 0.4s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .detail-header {
+            display: flex;
+            gap: 1.5rem;
+        }
+
+        @media (max-width: 640px) {
+            .detail-header {
+                flex-direction: column;
+            }
+        }
+
+        .detail-poster {
+            width: 150px;
+            height: 210px;
+            object-fit: cover;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .detail-meta {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 0.8rem;
+        }
+
+        .detail-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.8rem;
+            font-weight: 700;
+        }
+
+        .detail-genres {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .genre-badge {
+            background: rgba(139, 92, 246, 0.15);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            color: #c084fc;
+            padding: 0.2rem 0.6rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .detail-description {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            line-height: 1.6;
+            max-height: 120px;
+            overflow-y: auto;
+            padding-right: 0.5rem;
+        }
+
+        /* Mapping Status */
+        .mapping-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .mapping-info {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        .mapping-status-icon {
+            font-size: 1.2rem;
+        }
+
+        .mapping-status-icon.loading { color: var(--primary); animation: spin 1s linear infinite; }
+        .mapping-status-icon.success { color: var(--success); }
+        .mapping-status-icon.error { color: #ef4444; }
+
+        @keyframes spin {
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Sidebar Player & Episodes */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .panel-box {
+            background: var(--card-bg);
+            backdrop-filter: var(--glass-blur);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .player-container {
+            width: 100%;
+            aspect-ratio: 16/9;
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+            border: 1px solid var(--border-color);
+        }
+
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        .player-placeholder {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            color: var(--text-muted);
+            text-align: center;
+            padding: 1rem;
+        }
+
+        .player-placeholder i {
+            font-size: 2.5rem;
+            color: var(--primary);
+        }
+
+        /* Episodes List */
+        .episodes-container {
+            max-height: 400px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            padding-right: 0.3rem;
+        }
+
+        .episode-btn {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.2s ease;
+            font-weight: 500;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .episode-btn:hover {
+            background: rgba(139, 92, 246, 0.1);
+            border-color: var(--primary);
+            transform: translateX(3px);
+        }
+
+        .episode-btn.active {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(217, 70, 239, 0.2) 100%);
+            border-color: var(--primary);
+            box-shadow: inset 0 0 8px rgba(139, 92, 246, 0.3);
+        }
+
+        .episode-btn i {
+            font-size: 0.8rem;
+            opacity: 0.5;
+            transition: all 0.2s ease;
+        }
+
+        .episode-btn:hover i, .episode-btn.active i {
+            opacity: 1;
+            color: var(--primary);
+        }
+
+        .back-btn {
+            background: none;
+            border: none;
+            color: var(--primary);
+            cursor: pointer;
+            font-weight: 600;
+            align-self: flex-start;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .back-btn:hover {
+            color: var(--accent);
+        }
+
+        /* Match Suggestions */
+        .match-suggestion {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .match-suggestion:hover {
+            border-color: var(--primary);
+            background: rgba(139, 92, 246, 0.05);
+        }
+
+        .suggestion-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .badge-source {
+            background: var(--primary);
+            color: white;
+            font-size: 0.75rem;
+            padding: 0.15rem 0.4rem;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        /* Extension Repository Popup Modal Overlay */
+        .repo-modal-backdrop {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            background: rgba(0, 0, 0, 0.75) !important;
+            backdrop-filter: blur(10px) !important;
+            -webkit-backdrop-filter: blur(10px) !important;
+            z-index: 99999 !important;
+            display: flex !important;
+            justify-content: center !important;
+            align-items: center !important;
+            padding: 1rem !important;
+            box-sizing: border-box !important;
+        }
+
+        .repo-modal-backdrop[style*="display: none"] {
+            display: none !important;
+        }
+
+        .repo-modal-content {
+            background: #121020 !important;
+            border: 1px solid rgba(139, 92, 246, 0.3) !important;
+            border-radius: 16px !important;
+            width: 100% !important;
+            max-width: 580px !important;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), 0 0 30px rgba(139, 92, 246, 0.2) !important;
+            overflow: hidden !important;
+            animation: popupModalAnim 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        }
+
+        @keyframes popupModalAnim {
+            from { opacity: 0; transform: scale(0.92) translateY(-20px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        .repo-modal-header {
+            padding: 1rem 1.25rem !important;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+            display: flex !important;
+            justify-content: space-between !important;
+            align-items: center !important;
+            background: rgba(255, 255, 255, 0.03) !important;
+        }
+
+        .repo-modal-header h3 {
+            font-size: 1.1rem !important;
+            font-weight: 700 !important;
+            color: #f3f4f6 !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 0.5rem !important;
+            margin: 0 !important;
+        }
+
+        .repo-modal-close {
+            background: rgba(255, 255, 255, 0.05) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            color: #9ca3af !important;
+            width: 32px !important;
+            height: 32px !important;
+            border-radius: 50% !important;
+            font-size: 1.2rem !important;
+            cursor: pointer !important;
+            display: flex !important;
+            justify-content: center !important;
+            align-items: center !important;
+            transition: all 0.2s ease !important;
+        }
+
+        .repo-modal-close:hover {
+            background: rgba(239, 68, 68, 0.2) !important;
+            color: #ef4444 !important;
+            border-color: rgba(239, 68, 68, 0.4) !important;
+        }
+
+        .repo-modal-body {
+            padding: 1.25rem !important;
+        }
+
+        .repo-add-box {
+            background: rgba(255, 255, 255, 0.03) !important;
+            border: 1px solid rgba(255, 255, 255, 0.08) !important;
+            border-radius: 12px !important;
+            padding: 1rem !important;
+        }
+
+        .preset-chip {
+            background: rgba(139, 92, 246, 0.15) !important;
+            border: 1px solid rgba(139, 92, 246, 0.3) !important;
+            color: #e5e7eb !important;
+            font-size: 0.75rem !important;
+            padding: 0.3rem 0.6rem !important;
+            border-radius: 6px !important;
+            cursor: pointer !important;
+            margin-right: 0.3rem !important;
+            margin-top: 0.3rem !important;
+            transition: all 0.2s ease !important;
+        }
+
+        .preset-chip:hover {
+            background: #8b5cf6 !important;
+            color: #ffffff !important;
+            border-color: #8b5cf6 !important;
+        }
+
+        .repo-card {
+            background: rgba(255, 255, 255, 0.03) !important;
+            border: 1px solid rgba(255, 255, 255, 0.08) !important;
+            border-radius: 10px !important;
+            padding: 0.75rem 1rem !important;
+            display: flex !important;
+            justify-content: space-between !important;
+            align-items: center !important;
+            gap: 1rem !important;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="header-top">
+            <div class="logo">
+                <i class="fa-solid fa-bolt"></i> VileStream Cloud
+            </div>
+            <div class="source-controls">
+                <!-- Source selection parsed dynamically from backend -->
+                <select id="source-select">
+                    <option value="animotvslash">AnimoTVSlash</option>
+                </select>
+                <button id="add-repo-btn" class="btn-primary" onclick="openRepoModal()" style="padding: 0.5rem 0.8rem; background: linear-gradient(135deg, #10b981 0%, #059669 100%); font-weight: 600;" title="Add Extension Repository (+ Repo)">
+                    <i class="fa-solid fa-plus"></i> Add Repo
+                </button>
+                <button id="refresh-sources-btn" class="btn-primary" style="padding: 0.5rem 0.7rem;" title="Fetch new extensions / refresh list">
+                    <i class="fa-solid fa-arrows-rotate"></i>
+                </button>
+            </div>
+        </div>
+        <div class="header-bottom">
+            <div class="nav-tabs">
+                <button id="tab-browse-btn" class="btn-primary"><i class="fa-solid fa-compass"></i> Browse</button>
+                <button id="tab-fav-btn" class="btn-primary btn-subtle"><i class="fa-solid fa-heart"></i> Favorites</button>
+                <button id="tab-history-btn" class="btn-primary btn-subtle"><i class="fa-solid fa-clock-rotate-left"></i> History</button>
+            </div>
+            <div class="search-box">
+                <input type="text" id="search-input" placeholder="Search anime...">
+                <button id="search-btn" class="btn-primary">
+                    <i class="fa-solid fa-magnifying-glass"></i> Search
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <div class="content-area">
+            <!-- Grid Listing (Browse/Search) -->
+            <div id="grid-section">
+                <h2 class="section-title"><i class="fa-solid fa-fire"></i> Trending Anime</h2>
+                <div class="anime-grid" id="anime-grid">
+                    <!-- Cards will be dynamically inserted here -->
+                </div>
+            </div>
+
+            <!-- Detail panel (hidden initially) -->
+            <div class="detail-panel" id="detail-section">
+                <button class="back-btn" id="back-btn"><i class="fa-solid fa-arrow-left"></i> Back to Listing</button>
+                <div class="detail-header">
+                    <img src="" class="detail-poster" id="detail-poster" alt="Poster" referrerpolicy="no-referrer">
+                    <div class="detail-meta">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;">
+                            <h2 class="detail-title" id="detail-title">Anime Title</h2>
+                            <button id="fav-toggle-btn" class="btn-primary" style="padding: 0.5rem 0.8rem; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color);">
+                                <i class="fa-regular fa-heart" id="fav-icon"></i> <span id="fav-label">Favorite</span>
+                            </button>
+                        </div>
+                        <div class="detail-genres" id="detail-genres">
+                            <!-- Genres badges -->
+                        </div>
+                        <div class="detail-description" id="detail-desc">
+                            Description
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Scraper Extension Matching -->
+                <div class="mapping-card">
+                    <div class="mapping-info">
+                        <i class="fa-solid fa-link-slash mapping-status-icon error" id="mapping-icon"></i>
+                        <div>
+                            <div style="font-weight: 600;" id="mapping-status-text">Searching extension database...</div>
+                            <div style="font-size: 0.8rem; color: var(--text-muted);" id="mapping-subtext">Mapping to Scraper URL</div>
+                        </div>
+                    </div>
+                    <span class="badge-source" id="source-badge">AnimoTVSlash</span>
+                </div>
+
+                <!-- Manual selections if search suggestions found -->
+                <div id="suggestions-box" style="display: none;">
+                    <div style="font-weight: 600; margin-bottom: 0.5rem; font-size: 0.9rem;">
+                        Multiple matches found. Select the correct one:
+                    </div>
+                    <div class="suggestion-list" id="suggestions-list">
+                        <!-- Suggestions will load here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="sidebar">
+            <!-- Video Player -->
+            <div class="panel-box">
+                <h2 class="section-title"><i class="fa-solid fa-circle-play"></i> Video Player</h2>
+                <div class="player-container" id="player-container">
+                    <div class="player-placeholder" id="player-placeholder">
+                        <i class="fa-solid fa-clapperboard"></i>
+                        <div>Select an episode to start streaming</div>
+                    </div>
+                    <!-- Direct video or iframe will mount here -->
+                </div>
+                <div id="video-info" style="font-size: 0.85rem; color: var(--text-muted); display: none;">
+                    <strong style="color: var(--text-color);">Playing:</strong> <span id="playing-ep-title">Episode</span>
+                    <br>
+                    <strong style="color: var(--text-color);">Source Host:</strong> <span id="playing-quality">Default</span>
+                </div>
+            </div>
+
+            <!-- Episodes List Panel -->
+            <div class="panel-box" id="episodes-panel">
+                <h2 class="section-title"><i class="fa-solid fa-list-ul"></i> Episodes</h2>
+                <div class="episodes-container" id="episodes-list">
+                    <div style="color: var(--text-muted); text-align: center; padding: 2rem;">
+                        Select an anime to load episode list
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // API Base URL (same host since we are serving static files from Express)
+        const API_BASE = window.location.origin;
+
+        // UI elements
+        const sourceSelect = document.getElementById('source-select');
+        const refreshSourcesBtn = document.getElementById('refresh-sources-btn');
+        if (refreshSourcesBtn) {
+            refreshSourcesBtn.addEventListener('click', async () => {
+                const icon = refreshSourcesBtn.querySelector('i');
+                if (icon) icon.classList.add('fa-spin');
+                refreshSourcesBtn.disabled = true;
+                try {
+                    await fetch(`${API_BASE}/api/refresh`, { method: 'POST' });
+                    await loadSources();
+                } catch (e) {
+                    console.error("Refresh failed:", e);
+                } finally {
+                    if (icon) icon.classList.remove('fa-spin');
+                    refreshSourcesBtn.disabled = false;
+                }
+            });
+        }
+        const searchInput = document.getElementById('search-input');
+        const searchBtn = document.getElementById('search-btn');
+        const animeGrid = document.getElementById('anime-grid');
+        const gridSection = document.getElementById('grid-section');
+        
+        const detailSection = document.getElementById('detail-section');
+        const backBtn = document.getElementById('back-btn');
+        const detailPoster = document.getElementById('detail-poster');
+        const detailTitle = document.getElementById('detail-title');
+        const detailGenres = document.getElementById('detail-genres');
+        const detailDesc = document.getElementById('detail-desc');
+        
+        const mappingIcon = document.getElementById('mapping-icon');
+        const mappingStatusText = document.getElementById('mapping-status-text');
+        const mappingSubtext = document.getElementById('mapping-subtext');
+        const sourceBadge = document.getElementById('source-badge');
+        const suggestionsBox = document.getElementById('suggestions-box');
+        const suggestionsList = document.getElementById('suggestions-list');
+
+        const episodesList = document.getElementById('episodes-list');
+        const playerContainer = document.getElementById('player-container');
+        const playerPlaceholder = document.getElementById('player-placeholder');
+        const videoInfo = document.getElementById('video-info');
+        const playingEpTitle = document.getElementById('playing-ep-title');
+        const playingQuality = document.getElementById('playing-quality');
+
+        // State variables
+        let selectedAnime = null;
+        let mappedSourceUrl = null;
+        let hlsInstance = null;
+
+        // Load available extension sources from API
+        async function loadSources() {
+            try {
+                const res = await fetch(`${API_BASE}/api/sources`);
+                const sources = await res.json();
+                if (sources && sources.length > 0) {
+                    const currentVal = sourceSelect.value;
+                    sourceSelect.innerHTML = sources.map(s => 
+                        `<option value="${s.id}">${s.name} (${s.lang.toUpperCase()})</option>`
+                    ).join('');
+                    if (currentVal && Array.from(sourceSelect.options).some(o => o.value === currentVal)) {
+                        sourceSelect.value = currentVal;
+                    }
+                }
+            } catch (e) {
+                console.error("Failed to load sources:", e);
+            }
+        }
+
+        // Live WebSocket auto-refresh for hot-reloading extensions without restarting ports
+        function connectWS() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws/logs`;
+
+            try {
+                const ws = new WebSocket(wsUrl);
+                ws.onmessage = async (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
+                        if (data.type === 'reload') {
+                            console.log("[HotReload] Updating extension list dynamically:", data.fileName);
+                            await loadSources();
+                        }
+                    } catch (e) {
+                        console.error("WS message parse error:", e);
+                    }
+                };
+                ws.onclose = () => setTimeout(connectWS, 3000);
+            } catch (e) {
+                console.error("WebSocket connection error:", e);
+            }
+        }
+
+        // Fetch AniList GraphQL query
+        async function queryAniList(search = null) {
+            const query = `
+            query ($search: String, $page: Int, $perPage: Int) {
+              Page (page: $page, perPage: $perPage) {
+                media (search: $search, type: ANIME, sort: POPULARITY_DESC) {
+                  id
+                  title {
+                    english
+                    romaji
+                    native
+                  }
+                  coverImage {
+                    large
+                    extraLarge
+                  }
+                  description
+                  genres
+                  averageScore
+                  startDate {
+                    year
+                  }
+                }
+              }
+            }`;
+
+            const variables = {
+                page: 1,
+                perPage: 24
+            };
+            if (search) {
+                variables.search = search;
+            }
+
+            try {
+                const response = await fetch('https://graphql.anilist.co', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                    },
+                    body: JSON.stringify({ query, variables })
+                });
+                const result = await response.json();
+                return result.data.Page.media;
+            } catch (e) {
+                console.error("AniList API error:", e);
+                return [];
+            }
+        }
+
+        // Display anime grid
+        function displayAnimeList(mediaList, sectionTitle = "Trending Anime") {
+            gridSection.querySelector('.section-title').innerHTML = `<i class="fa-solid fa-fire"></i> ${sectionTitle}`;
+            animeGrid.innerHTML = '';
+            
+            if (mediaList.length === 0) {
+                animeGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 3rem;">No results found.</div>';
+                return;
+            }
+
+            mediaList.forEach(anime => {
+                const title = anime.title.english || anime.title.romaji || anime.title.native;
+                const score = anime.averageScore ? (anime.averageScore / 10).toFixed(1) : 'N/A';
+                const card = document.createElement('div');
+                card.className = 'anime-card';
+                card.innerHTML = `
+                    <div class="anime-poster-wrapper">
+                        <img class="anime-poster" src="${anime.coverImage.large}" alt="${title}">
+                        <div class="anime-score"><i class="fa-solid fa-star"></i> ${score}</div>
+                    </div>
+                    <div class="anime-info-mini">
+                        <div class="anime-title-mini">${title}</div>
+                        <div class="anime-year">${anime.startDate.year || 'Unknown'}</div>
+                    </div>
+                `;
+                card.addEventListener('click', () => selectAnime(anime));
+                animeGrid.appendChild(card);
+            });
+        }
+
+        // Select anime & display details
+        async function selectAnime(anime) {
+            selectedAnime = anime;
+            const title = anime.title.english || anime.title.romaji;
+            
+            // Toggle UI views
+            document.body.classList.add('detail-active');
+            gridSection.style.display = 'none';
+            detailSection.style.display = 'flex';
+            
+            // Populate details
+            detailPoster.src = anime.coverImage.large;
+            detailTitle.textContent = title;
+            detailDesc.innerHTML = anime.description || 'No description available.';
+            detailGenres.innerHTML = anime.genres.map(g => `<span class="genre-badge">${g}</span>`).join('');
+            
+            // Set source badge
+            const selectedSourceName = sourceSelect.options[sourceSelect.selectedIndex].text.split(' ')[0];
+            sourceBadge.textContent = selectedSourceName;
+            
+            // Start Scraper Mapping
+            mapScraperAnime(title);
+        }
+
+        // Map AniList title with local scraper
+        async function mapScraperAnime(title) {
+            setMappingState('loading', 'Searching extension database...', `Searching match for "${title}"`);
+            suggestionsBox.style.display = 'none';
+            episodesList.innerHTML = '<div style="color: var(--text-muted); text-align: center; padding: 2rem;">Waiting for extension match...</div>';
+
+            const sourceId = sourceSelect.value;
+            const searchUrl = `${API_BASE}/api/${sourceId}/search?query=${encodeURIComponent(title)}`;
+            
+            try {
+                const res = await fetch(searchUrl);
+                const data = await res.json();
+                
+                if (data.list && data.list.length > 0) {
+                    const matches = data.list;
+                    
+                    // Exact or close matching logic:
+                    // If there is only one match, load it directly.
+                    // If multiple, show suggestions but load the first one by default.
+                    if (matches.length === 1) {
+                        const matched = matches[0];
+                        setMappingState('success', 'Extension matched successfully!', matched.name);
+                        loadEpisodes(matched.link);
+                    } else {
+                        setMappingState('success', `${matches.length} matches found.`, 'Please select the correct title below.');
+                        
+                        // Render matches list
+                        suggestionsBox.style.display = 'block';
+                        suggestionsList.innerHTML = matches.map((m, index) => `
+                            <div class="match-suggestion" onclick="chooseMatch('${m.link}', '${m.name.replace(/'/g, "\\'")}')">
+                                <span>${m.name}</span>
+                                <i class="fa-solid fa-chevron-right" style="opacity: 0.5;"></i>
+                            </div>
+                        `).join('');
+                        
+                        // Load the first match by default
+                        loadEpisodes(matches[0].link);
+                    }
+                } else {
+                    setMappingState('error', 'No match found in extension source.', 'Try changing the selected scraping source or checking if the anime is available.');
+                    episodesList.innerHTML = '<div style="color: var(--text-muted); text-align: center; padding: 2rem;">No matching episodes found.</div>';
+                }
+            } catch (e) {
+                console.error("Mapping error:", e);
+                setMappingState('error', 'Error calling backend scraper.', e.message);
+                episodesList.innerHTML = '<div style="color: var(--text-muted); text-align: center; padding: 2rem;">Error loading episodes.</div>';
+            }
+        }
+
+        function chooseMatch(link, name) {
+            setMappingState('success', 'Selected match:', name);
+            loadEpisodes(link);
+        }
+
+        // Set mapping status card look
+        function setMappingState(status, title, subtitle) {
+            mappingIcon.className = 'mapping-status-icon';
+            if (status === 'loading') {
+                mappingIcon.classList.add('fa-solid', 'fa-circle-notch', 'loading');
+                mappingStatusText.style.color = 'var(--text-color)';
+            } else if (status === 'success') {
+                mappingIcon.classList.add('fa-solid', 'fa-circle-check', 'success');
+                mappingStatusText.style.color = 'var(--success)';
+            } else {
+                mappingIcon.classList.add('fa-solid', 'fa-circle-exclamation', 'error');
+                mappingStatusText.style.color = '#ef4444';
+            }
+            mappingStatusText.textContent = title;
+            mappingSubtext.textContent = subtitle;
+        }
+
+        // Load Episodes List from scraper
+        async function loadEpisodes(animeLink) {
+            mappedSourceUrl = animeLink;
+            const sourceId = sourceSelect.value;
+            updateFavButtonState(sourceId, animeLink);
+            episodesList.innerHTML = '<div style="color: var(--text-muted); text-align: center; padding: 2rem;"><i class="fa-solid fa-circle-notch loading"></i> Loading episodes...</div>';
+
+            const sourceId = sourceSelect.value;
+            const detailUrl = `${API_BASE}/api/${sourceId}/detail?url=${encodeURIComponent(animeLink)}`;
+            
+            try {
+                const res = await fetch(detailUrl);
+                const data = await res.json();
+                
+                if (data.chapters && data.chapters.length > 0) {
+                    // Populate episodes
+                    episodesList.innerHTML = '';
+                    data.chapters.forEach((ep) => {
+                        const btn = document.createElement('button');
+                        btn.className = 'episode-btn';
+                        btn.innerHTML = `
+                            <span>${ep.name}</span>
+                            <i class="fa-solid fa-play"></i>
+                        `;
+                        btn.addEventListener('click', () => {
+                            // Highlight active
+                            document.querySelectorAll('.episode-btn').forEach(b => b.classList.remove('active'));
+                            btn.classList.add('active');
+                            
+                            // Play episode
+                            playEpisode(ep);
+                        });
+                        episodesList.appendChild(btn);
+                    });
+                } else {
+                    episodesList.innerHTML = '<div style="color: var(--text-muted); text-align: center; padding: 2rem;">No episodes available.</div>';
+                }
+            } catch (e) {
+                console.error("Episodes fetch error:", e);
+                episodesList.innerHTML = '<div style="color: var(--text-muted); text-align: center; padding: 2rem;">Error loading episodes from source.</div>';
+            }
+        }
+
+        // Fetch streaming video source and play it
+        async function playEpisode(episode) {
+            // Display loading in player
+            playerContainer.innerHTML = `
+                <div class="player-placeholder">
+                    <i class="fa-solid fa-circle-notch loading" style="font-size: 2.5rem;"></i>
+                    <div>Resolving direct stream links...</div>
+                </div>
+            `;
+            videoInfo.style.display = 'none';
+
+            const sourceId = sourceSelect.value;
+            const videoApiUrl = `${API_BASE}/api/${sourceId}/videos?url=${encodeURIComponent(episode.url)}`;
+            
+            try {
+                const res = await fetch(videoApiUrl);
+                const videos = await res.json();
+                
+                if (videos && videos.length > 0) {
+                    // Get primary video
+                    const video = videos[0];
+                    console.log("Mounting video source:", video);
+
+                    // Stop any existing HLS instance
+                    if (hlsInstance) {
+                        hlsInstance.destroy();
+                        hlsInstance = null;
+                    }
+
+                    // Check if the stream url is an embed/iframe or a direct HLS m3u8 / MP4 link
+                    const streamUrl = video.url;
+                    
+                    // Simple check if it's an iframe
+                    const isEmbed = !streamUrl.includes('.m3u8') && !streamUrl.includes('.mp4') && (streamUrl.includes('embed') || streamUrl.includes('iframe') || streamUrl.includes('player') || !streamUrl.startsWith('http'));
+
+                    if (isEmbed) {
+                        // Render iframe player
+                        playerContainer.innerHTML = `<iframe src="${streamUrl}" allowfullscreen></iframe>`;
+                    } else {
+                        // Render direct video tag
+                        playerContainer.innerHTML = `<video id="video-player" controls autoplay playsinline></video>`;
+                        const videoEl = document.getElementById('video-player');
+
+                        if (streamUrl.includes('.m3u8')) {
+                            // HLS Streaming
+                            if (Hls.isSupported()) {
+                                hlsInstance = new Hls({
+                                    // Some scrapers require specific referers. HLS.js cannot modify native browser request headers,
+                                    // but we pass referers as parameter/proxy settings if required on backend.
+                                });
+                                hlsInstance.loadSource(streamUrl);
+                                hlsInstance.attachMedia(videoEl);
+                            } else if (videoEl.canPlayType('application/vnd.apple.mpegurl')) {
+                                // Safari native HLS support
+                                videoEl.src = streamUrl;
+                            } else {
+                                playerContainer.innerHTML = '<div class="player-placeholder"><i class="fa-solid fa-circle-exclamation error"></i> HLS streaming is not supported in this browser.</div>';
+                            }
+                        } else {
+                            // MP4 or other direct formats
+                            videoEl.src = streamUrl;
+                        }
+
+                        // Attach subtitle tracks if provided by extension
+                        if (video.subtitles && Array.isArray(video.subtitles)) {
+                            video.subtitles.forEach((sub, idx) => {
+                                const track = document.createElement('track');
+                                track.kind = 'subtitles';
+                                track.label = sub.label || sub.lang || `Subtitle ${idx + 1}`;
+                                track.srclang = sub.srclang || 'en';
+                                track.src = sub.file || sub.url;
+                                if (idx === 0 || sub.default) track.default = true;
+                                videoEl.appendChild(track);
+                            });
+                        }
+
+                        // Track watch history progress every 5 seconds
+                        let lastReportedSec = 0;
+                        videoEl.addEventListener('timeupdate', () => {
+                            const curSec = Math.floor(videoEl.currentTime);
+                            if (videoEl.duration > 0 && curSec > 0 && curSec % 5 === 0 && curSec !== lastReportedSec) {
+                                lastReportedSec = curSec;
+                                fetch(`${API_BASE}/api/history`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        extensionId: sourceSelect.value,
+                                        extensionName: sourceBadge.textContent,
+                                        animeUrl: mappedSourceUrl || '',
+                                        animeName: detailTitle.textContent || '',
+                                        animeImage: detailPoster.src || '',
+                                        episodeUrl: episode.url,
+                                        episodeName: episode.name,
+                                        progress: videoEl.currentTime,
+                                        duration: videoEl.duration
+                                    })
+                                }).catch(() => {});
+                            }
+                        });
+                    }
+
+                    // Update playing info panel
+                    videoInfo.style.display = 'block';
+                    playingEpTitle.textContent = episode.name;
+                    playingQuality.textContent = video.quality || "Default Stream";
+                } else {
+                    playerContainer.innerHTML = `
+                        <div class="player-placeholder">
+                            <i class="fa-solid fa-circle-exclamation" style="color: #ef4444;"></i>
+                            <div>Failed to resolve stream link for this episode.</div>
+                        </div>
+                    `;
+                }
+            } catch (e) {
+                console.error("Video resolve error:", e);
+                playerContainer.innerHTML = `
+                    <div class="player-placeholder">
+                        <i class="fa-solid fa-triangle-exclamation" style="color: #ef4444;"></i>
+                        <div>Error resolving streams: ${e.message}</div>
+                    </div>
+                `;
+            }
+        }
+
+        // Fetch popular entries directly from the selected extension backend source
+        async function loadSourceEntries(sourceId, sourceName) {
+            const cleanName = sourceName ? sourceName.split(' ')[0] : sourceId;
+            gridSection.querySelector('.section-title').innerHTML = `<i class="fa-solid fa-fire"></i> Trending Entries — ${cleanName}`;
+            animeGrid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 3rem;"><i class="fa-solid fa-circle-notch loading"></i> Loading entries from ${cleanName}...</div>`;
+
+            try {
+                const res = await fetch(`${API_BASE}/api/${sourceId}/popular?page=1`);
+                const data = await res.json();
+
+                if (data && data.list && data.list.length > 0) {
+                    displayExtensionGrid(data.list, cleanName);
+                } else {
+                    console.warn(`No entries returned from ${sourceId}, falling back to AniList trending.`);
+                    const trending = await queryAniList();
+                    displayAnimeList(trending, `Trending Anime (AniList Fallback for ${cleanName})`);
+                }
+            } catch (e) {
+                console.error(`Error loading source entries for ${sourceId}:`, e);
+                const trending = await queryAniList();
+                displayAnimeList(trending, `Trending Anime (AniList Fallback for ${cleanName})`);
+            }
+        }
+
+        // Display extension source items grid
+        function displayExtensionGrid(items, sourceName) {
+            gridSection.querySelector('.section-title').innerHTML = `<i class="fa-solid fa-fire"></i> Trending Entries — ${sourceName}`;
+            animeGrid.innerHTML = '';
+
+            items.forEach(item => {
+                const title = item.name || 'Untitled';
+                const imgUrl = item.imageUrl || item.cover || 'https://via.placeholder.com/300x420?text=No+Cover';
+                const card = document.createElement('div');
+                card.className = 'anime-card';
+                card.innerHTML = `
+                    <div class="anime-poster-wrapper">
+                        <img class="anime-poster" src="${imgUrl}" alt="${title}" referrerpolicy="no-referrer" onerror="if(!this.dataset.proxied){this.dataset.proxied='true';this.src='/api/proxy-image?url='+encodeURIComponent('${imgUrl}');}else{this.src='https://via.placeholder.com/300x420?text=No+Image';}">
+                        <div class="anime-score"><i class="fa-solid fa-play"></i> Watch</div>
+                    </div>
+                    <div class="anime-info-mini">
+                        <div class="anime-title-mini">${title}</div>
+                        <div class="anime-year">${sourceName}</div>
+                    </div>
+                `;
+                card.addEventListener('click', () => selectExtensionItem(item, sourceName));
+                animeGrid.appendChild(card);
+            });
+        }
+
+        // Handle clicking an entry directly from an extension source
+        async function selectExtensionItem(item, sourceName) {
+            selectedAnime = { title: { english: item.name, romaji: item.name }, link: item.link };
+            
+            // Toggle UI views
+            document.body.classList.add('detail-active');
+            gridSection.style.display = 'none';
+            detailSection.style.display = 'flex';
+            
+            // Populate details
+            detailPoster.src = item.imageUrl || item.cover || 'https://via.placeholder.com/300x420?text=No+Cover';
+            detailTitle.textContent = item.name;
+            detailDesc.innerHTML = item.description || `Anime entries fetched live from ${sourceName}.`;
+            detailGenres.innerHTML = `<span class="genre-badge">${sourceName}</span>`;
+            
+            // Set source badge
+            sourceBadge.textContent = sourceName;
+            
+            // Direct load episodes if link is present, otherwise map
+            if (item.link) {
+                setMappingState('success', 'Source matched!', item.name);
+                loadEpisodes(item.link);
+            } else {
+                mapScraperAnime(item.name);
+            }
+        }
+
+        // Favorite Toggle logic
+        const favToggleBtn = document.getElementById('fav-toggle-btn');
+        const favIcon = document.getElementById('fav-icon');
+        const favLabel = document.getElementById('fav-label');
+
+        async function updateFavButtonState(extId, animeUrl) {
+            if (!extId || !animeUrl) return;
+            try {
+                const res = await fetch(`${API_BASE}/api/favorites/check?extensionId=${encodeURIComponent(extId)}&animeUrl=${encodeURIComponent(animeUrl)}`);
+                const data = await res.json();
+                if (data.isFavorite) {
+                    favIcon.className = 'fa-solid fa-heart';
+                    favIcon.style.color = '#ec4899';
+                    favLabel.textContent = 'Favorited';
+                } else {
+                    favIcon.className = 'fa-regular fa-heart';
+                    favIcon.style.color = '';
+                    favLabel.textContent = 'Favorite';
+                }
+            } catch (e) {}
+        }
+
+        if (favToggleBtn) {
+            favToggleBtn.addEventListener('click', async () => {
+                const extId = sourceSelect.value;
+                const animeUrl = mappedSourceUrl || selectedAnime?.link;
+                if (!extId || !animeUrl) return;
+
+                const isCurrentlyFav = favIcon.classList.contains('fa-solid');
+                if (isCurrentlyFav) {
+                    await fetch(`${API_BASE}/api/favorites?extensionId=${encodeURIComponent(extId)}&animeUrl=${encodeURIComponent(animeUrl)}`, { method: 'DELETE' });
+                } else {
+                    await fetch(`${API_BASE}/api/favorites`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            extensionId: extId,
+                            extensionName: sourceBadge.textContent,
+                            animeUrl: animeUrl,
+                            animeName: detailTitle.textContent,
+                            animeImage: detailPoster.src
+                        })
+                    });
+                }
+                await updateFavButtonState(extId, animeUrl);
+            });
+        }
+
+        // Nav Tab Listeners
+        const tabBrowseBtn = document.getElementById('tab-browse-btn');
+        const tabFavBtn = document.getElementById('tab-fav-btn');
+        const tabHistoryBtn = document.getElementById('tab-history-btn');
+
+        function setActiveTab(activeBtn) {
+            [tabBrowseBtn, tabFavBtn, tabHistoryBtn].forEach(b => {
+                if (!b) return;
+                if (b === activeBtn) {
+                    b.style.background = 'linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%)';
+                    b.style.border = 'none';
+                } else {
+                    b.style.background = 'rgba(255,255,255,0.05)';
+                    b.style.border = '1px solid var(--border-color)';
+                }
+            });
+        }
+
+        if (tabBrowseBtn) {
+            tabBrowseBtn.addEventListener('click', () => {
+                setActiveTab(tabBrowseBtn);
+                document.body.classList.remove('detail-active');
+                detailSection.style.display = 'none';
+                gridSection.style.display = 'block';
+                const selectedSourceName = sourceSelect.options[sourceSelect.selectedIndex]?.text || sourceSelect.value;
+                loadSourceEntries(sourceSelect.value, selectedSourceName);
+            });
+        }
+
+        if (tabFavBtn) {
+            tabFavBtn.addEventListener('click', async () => {
+                setActiveTab(tabFavBtn);
+                document.body.classList.remove('detail-active');
+                detailSection.style.display = 'none';
+                gridSection.style.display = 'block';
+                gridSection.querySelector('.section-title').innerHTML = '<i class="fa-solid fa-heart" style="color: #ec4899;"></i> Saved Favorites';
+                animeGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 3rem;"><i class="fa-solid fa-circle-notch loading"></i> Loading favorites...</div>';
+                
+                try {
+                    const res = await fetch(`${API_BASE}/api/favorites`);
+                    const items = await res.json();
+                    if (items && items.length > 0) {
+                        const formatted = items.map(i => ({ name: i.anime_name, imageUrl: i.anime_image, link: i.anime_url, extensionId: i.extension_id }));
+                        displayExtensionGrid(formatted, 'Favorites');
+                    } else {
+                        animeGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 3rem;">No saved favorites yet.</div>';
+                    }
+                } catch (e) {
+                    animeGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 3rem;">Failed to load favorites.</div>';
+                }
+            });
+        }
+
+        if (tabHistoryBtn) {
+            tabHistoryBtn.addEventListener('click', async () => {
+                setActiveTab(tabHistoryBtn);
+                document.body.classList.remove('detail-active');
+                detailSection.style.display = 'none';
+                gridSection.style.display = 'block';
+                gridSection.querySelector('.section-title').innerHTML = '<i class="fa-solid fa-clock-rotate-left" style="color: #8b5cf6;"></i> Watch History';
+                animeGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 3rem;"><i class="fa-solid fa-circle-notch loading"></i> Loading watch history...</div>';
+                
+                try {
+                    const res = await fetch(`${API_BASE}/api/history?limit=50`);
+                    const items = await res.json();
+                    if (items && items.length > 0) {
+                        const formatted = items.map(i => {
+                            const percent = i.duration > 0 ? Math.round((i.progress / i.duration) * 100) : 0;
+                            return {
+                                name: `${i.anime_name || 'Anime'} — ${i.episode_name || 'Episode'} (${percent}%)`,
+                                imageUrl: i.anime_image,
+                                link: i.anime_url
+                            };
+                        });
+                        displayExtensionGrid(formatted, 'History');
+                    } else {
+                        animeGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 3rem;">No watch history yet.</div>';
+                    }
+                } catch (e) {
+                    animeGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 3rem;">Failed to load watch history.</div>';
+                }
+            });
+        }
+
+        // Live change listener on source dropdown
+        sourceSelect.addEventListener('change', async () => {
+            const selectedSourceName = sourceSelect.options[sourceSelect.selectedIndex]?.text || sourceSelect.value;
+            console.log("Source dropdown changed to:", selectedSourceName);
+
+            if (detailSection.style.display !== 'none' && selectedAnime) {
+                // If in detail view, update source badge and re-map for the new source
+                const cleanName = selectedSourceName.split(' ')[0];
+                sourceBadge.textContent = cleanName;
+                const title = selectedAnime.title?.english || selectedAnime.title?.romaji || selectedAnime.name;
+                if (title) {
+                    mapScraperAnime(title);
+                }
+            } else {
+                // If in main grid view, load entries live from the newly selected source
+                await loadSourceEntries(sourceSelect.value, selectedSourceName);
+            }
+        });
+
+        // Load trending list on startup
+        async function init() {
+            connectWS();
+            await loadSources();
+            if (sourceSelect.value) {
+                const selectedSourceName = sourceSelect.options[sourceSelect.selectedIndex]?.text || sourceSelect.value;
+                await loadSourceEntries(sourceSelect.value, selectedSourceName);
+            } else {
+                const trending = await queryAniList();
+                displayAnimeList(trending, "Trending Anime");
+            }
+        }
+
+        // Set search trigger listeners
+        searchBtn.addEventListener('click', async () => {
+            const query = searchInput.value.trim();
+            if (query) {
+                const sourceId = sourceSelect.value;
+                const selectedSourceName = sourceSelect.options[sourceSelect.selectedIndex]?.text || sourceId;
+                const cleanName = selectedSourceName.split(' ')[0];
+                
+                gridSection.querySelector('.section-title').innerHTML = `<i class="fa-solid fa-search"></i> Search results for "${query}" (${cleanName})`;
+                animeGrid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 3rem;"><i class="fa-solid fa-circle-notch loading"></i> Searching ${cleanName}...</div>`;
+
+                try {
+                    const res = await fetch(`${API_BASE}/api/${sourceId}/search?query=${encodeURIComponent(query)}`);
+                    const data = await res.json();
+                    if (data && data.list && data.list.length > 0) {
+                        displayExtensionGrid(data.list, cleanName);
+                    } else {
+                        const results = await queryAniList(query);
+                        displayAnimeList(results, `Search results for "${query}" (AniList Fallback)`);
+                    }
+                } catch (e) {
+                    const results = await queryAniList(query);
+                    displayAnimeList(results, `Search results for "${query}" (AniList Fallback)`);
+                }
+            }
+        });
+
+        searchInput.addEventListener('keydown', async (e) => {
+            if (e.key === 'Enter') {
+                searchBtn.click();
+            }
+        });
+
+        // Back button navigation
+        backBtn.addEventListener('click', () => {
+            document.body.classList.remove('detail-active');
+            detailSection.style.display = 'none';
+            gridSection.style.display = 'block';
+            
+            // Stop player if any direct streaming is happening
+            if (hlsInstance) {
+                hlsInstance.destroy();
+                hlsInstance = null;
+            }
+            playerContainer.innerHTML = `
+                <div class="player-placeholder">
+                    <i class="fa-solid fa-clapperboard"></i>
+                    <div>Select an episode to start streaming</div>
+                </div>
+            `;
+            videoInfo.style.display = 'none';
+        });
+
+        // Trigger loading
+        init();
+    </script>
+
+    <!-- Extension Repositories Modal -->
+    <div id="repo-modal" class="repo-modal-backdrop" style="display: none;">
+        <div class="repo-modal-content">
+            <div class="repo-modal-header">
+                <h3 style="font-size: 1.1rem; font-weight: 700;"><i class="fa-solid fa-boxes-stacked" style="color: var(--primary);"></i> Extension Repositories</h3>
+                <button class="repo-modal-close" onclick="closeRepoModal()">&times;</button>
+            </div>
+            <div class="repo-modal-body">
+                <!-- Add New Repo Box -->
+                <div class="repo-add-box">
+                    <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 0.4rem; color: var(--text-color);">
+                        Add Repository URL (Mangayomi index.json / GitHub raw JS):
+                    </label>
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        <input type="text" id="repo-url-input" placeholder="e.g. https://raw.githubusercontent.com/.../index.json" style="flex: 1; min-width: 240px;">
+                        <button class="btn-primary" onclick="submitAddRepo()" id="submit-repo-btn">
+                            <i class="fa-solid fa-cloud-arrow-down"></i> Add Repo
+                        </button>
+                    </div>
+                    <!-- Quick Preset Chips -->
+                    <div style="margin-top: 0.8rem;">
+                        <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; margin-right: 0.4rem;">Quick Presets:</span>
+                        <button class="preset-chip" onclick="fillPresetRepo('https://raw.githubusercontent.com/manga-download/mangayomi-extensions/main/index.json')">
+                            <i class="fa-brands fa-github"></i> Mangayomi Official Repo
+                        </button>
+                        <button class="preset-chip" onclick="fillPresetRepo('https://raw.githubusercontent.com/manga-download/mangayomi-extensions/main/anime_index.json')">
+                            <i class="fa-solid fa-tv"></i> Mangayomi Anime Index
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Installed Repositories List -->
+                <div style="margin-top: 1.2rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem;">
+                        <h4 style="font-size: 0.95rem; font-weight: 700;"><i class="fa-solid fa-layer-group"></i> Installed Repositories</h4>
+                        <button class="btn-primary btn-subtle" onclick="syncAllRepositories()" style="font-size: 0.75rem; padding: 0.3rem 0.6rem; cursor: pointer;">
+                            <i class="fa-solid fa-rotate"></i> Sync All
+                        </button>
+                    </div>
+                    <div id="repo-list-container" style="max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.5rem;">
+                        <!-- Dynamically populated repo cards -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function openRepoModal() {
+            const modal = document.getElementById('repo-modal');
+            if (modal) modal.style.display = 'flex';
+            loadReposList();
+        }
+        function closeRepoModal() {
+            const modal = document.getElementById('repo-modal');
+            if (modal) modal.style.display = 'none';
+        }
+        function fillPresetRepo(url) {
+            document.getElementById('repo-url-input').value = url;
+        }
+        async function submitAddRepo() {
+            const input = document.getElementById('repo-url-input');
+            const btn = document.getElementById('submit-repo-btn');
+            const url = input ? input.value.trim() : '';
+            if (!url) return alert('Please enter a repository URL');
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Installing...';
+            try {
+                const res = await fetch('/api/repos/add', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Failed to add repo');
+                alert(`Successfully installed ${data.installedCount} extensions from repository!`);
+                input.value = '';
+                loadReposList();
+                if (typeof loadSources === 'function') loadSources();
+            } catch (err) {
+                alert('Error: ' + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-down"></i> Add Repo';
+            }
+        }
+        async function loadReposList() {
+            const container = document.getElementById('repo-list-container');
+            if (!container) return;
+            try {
+                const res = await fetch('/api/repos');
+                const repos = await res.json();
+                if (!repos || repos.length === 0) {
+                    container.innerHTML = '<div style="color: var(--text-muted); font-size: 0.85rem; padding: 0.5rem; text-align: center;">No repositories added yet.</div>';
+                    return;
+                }
+                container.innerHTML = repos.map(r => `
+                    <div class="repo-card">
+                        <div>
+                            <div style="font-weight: 600; font-size: 0.9rem;">${escapeHtml(r.name || 'Repository')}</div>
+                            <div style="font-size: 0.75rem; color: var(--text-muted); font-family: monospace;">${escapeHtml(r.url)}</div>
+                            <div style="font-size: 0.75rem; color: var(--success); margin-top: 0.2rem;">
+                                <i class="fa-solid fa-puzzle-piece"></i> ${r.extension_count || r.extensions?.length || 0} extensions installed
+                            </div>
+                        </div>
+                        <button onclick="deleteRepo('${escapeJsString(r.url)}')" style="background: rgba(239,68,68,0.2); border: 1px solid rgba(239,68,68,0.4); color: #f87171; padding: 0.3rem 0.6rem; border-radius: 6px; cursor: pointer; font-size: 0.8rem;">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </div>
+                `).join('');
+            } catch (e) {
+                container.innerHTML = `<div style="color: var(--error); font-size: 0.8rem;">Failed to load repos: ${e.message}</div>`;
+            }
+        }
+        async function deleteRepo(url) {
+            if (!confirm('Are you sure you want to remove this repository and its installed extensions?')) return;
+            try {
+                const res = await fetch('/api/repos', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Failed to remove repo');
+                loadReposList();
+                if (typeof fetchSources === 'function') await fetchSources();
+                if (typeof loadSources === 'function') await loadSources();
+            } catch (e) {
+                alert('Error: ' + e.message);
+            }
+        }
+        async function syncAllRepositories() {
+            try {
+                const res = await fetch('/api/repos/sync', { method: 'POST' });
+                const data = await res.json();
+                alert('Repositories synchronized successfully!');
+                loadReposList();
+                if (typeof fetchSources === 'function') await fetchSources();
+                if (typeof loadSources === 'function') await loadSources();
+            } catch (e) {
+                alert('Sync error: ' + e.message);
+            }
+        }
+        function escapeHtml(str) {
+            return (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+        function escapeJsString(str) {
+            return (str || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+        }
+    </script>
+</body>
+</html>

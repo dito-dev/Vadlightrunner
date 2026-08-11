@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LightRunner — Extension Health Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0a0a12;
+            --surface: rgba(18, 18, 30, 0.85);
+            --surface-hover: rgba(28, 28, 45, 0.9);
+            --border: rgba(255,255,255,0.06);
+            --text: #e8eaed;
+            --text-muted: #7a7f8a;
+            --primary: #8b5cf6;
+            --primary-glow: rgba(139, 92, 246, 0.25);
+            --accent: #06d6a0;
+            --accent-glow: rgba(6, 214, 160, 0.2);
+            --warn: #f59e0b;
+            --error: #ef4444;
+            --error-glow: rgba(239, 68, 68, 0.2);
+            --success: #10b981;
+            --radius: 12px;
+        }
+
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        .gradient-bg {
+            position: fixed; inset:0; z-index:-1;
+            background:
+                radial-gradient(ellipse at 20% 0%, rgba(139,92,246,0.12) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 100%, rgba(6,214,160,0.08) 0%, transparent 50%),
+                var(--bg);
+        }
+
+        header {
+            background: rgba(10,10,18,0.7);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky; top:0; z-index:100;
+        }
+
+        .logo {
+            font-weight: 800; font-size: 1.4rem;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .logo span { font-weight: 400; opacity: 0.7; }
+
+        .header-status {
+            display: flex; gap: 1rem; align-items: center;
+        }
+
+        .ws-status {
+            display: flex; align-items: center; gap: 0.4rem;
+            font-size: 0.85rem; color: var(--text-muted);
+        }
+
+        .ws-dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: var(--error);
+            transition: background 0.3s;
+        }
+        .ws-dot.connected { background: var(--success); box-shadow: 0 0 8px var(--accent-glow); }
+
+        .container { max-width: 1400px; margin: 0 auto; padding: 1.5rem 2rem; }
+
+        /* Stats Row */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .stat-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.2rem 1.5rem;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+        }
+
+        .stat-label {
+            font-size: 0.8rem; color: var(--text-muted);
+            text-transform: uppercase; letter-spacing: 0.05em;
+            margin-bottom: 0.3rem;
+        }
+
+        .stat-value {
+            font-size: 2rem; font-weight: 800;
+        }
+        .stat-value.success { color: var(--success); }
+        .stat-value.error { color: var(--error); }
+        .stat-value.warn { color: var(--warn); }
+        .stat-value.primary { color: var(--primary); }
+
+        /* Tab Bar */
+        .tabs {
+            display: flex; gap: 0.5rem; margin-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 0.5rem;
+        }
+
+        .tab-btn {
+            padding: 0.5rem 1.2rem;
+            border-radius: 8px 8px 0 0;
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .tab-btn:hover { color: var(--text); background: rgba(255,255,255,0.05); }
+        .tab-btn.active {
+            color: var(--primary);
+            background: var(--primary-glow);
+            font-weight: 600;
+        }
+
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; }
+
+        /* Extension Table */
+        .ext-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0 0.4rem;
+        }
+
+        .ext-table th {
+            text-align: left; padding: 0.5rem 1rem;
+            font-size: 0.75rem; color: var(--text-muted);
+            text-transform: uppercase; letter-spacing: 0.05em;
+        }
+
+        .ext-table td {
+            padding: 0.8rem 1rem;
+            background: var(--surface);
+            transition: background 0.2s;
+        }
+        .ext-table tr:hover td { background: var(--surface-hover); }
+
+        .ext-table td:first-child { border-radius: var(--radius) 0 0 var(--radius); }
+        .ext-table td:last-child { border-radius: 0 var(--radius) var(--radius) 0; }
+
+        .status-badge {
+            display: inline-flex; align-items: center; gap: 0.3rem;
+            padding: 0.2rem 0.6rem; border-radius: 6px;
+            font-size: 0.8rem; font-weight: 600;
+        }
+        .status-badge.loaded { background: rgba(16,185,129,0.15); color: var(--success); }
+        .status-badge.healthy { background: rgba(16,185,129,0.15); color: var(--success); }
+        .status-badge.error { background: rgba(239,68,68,0.15); color: var(--error); }
+        .status-badge.empty { background: rgba(245,158,11,0.15); color: var(--warn); }
+        .status-badge.unknown { background: rgba(122,127,138,0.15); color: var(--text-muted); }
+
+        .nsfw-tag {
+            background: rgba(239,68,68,0.15); color: var(--error);
+            padding: 0.1rem 0.4rem; border-radius: 4px;
+            font-size: 0.7rem; font-weight: 600;
+        }
+
+        /* Log Console */
+        .log-console {
+            background: rgba(0,0,0,0.4);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            height: 400px;
+            overflow-y: auto;
+            padding: 0;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.82rem;
+            scroll-behavior: smooth;
+        }
+
+        .log-entry {
+            padding: 0.35rem 1rem;
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+            display: flex; gap: 0.8rem; align-items: baseline;
+            transition: background 0.15s;
+        }
+        .log-entry:hover { background: rgba(255,255,255,0.03); }
+
+        .log-time { color: var(--text-muted); min-width: 80px; font-size: 0.75rem; }
+        .log-source { color: var(--primary); min-width: 100px; font-weight: 600; }
+        .log-level { min-width: 50px; font-weight: 600; }
+        .log-level.info { color: var(--accent); }
+        .log-level.warn { color: var(--warn); }
+        .log-level.error { color: var(--error); }
+        .log-level.debug { color: var(--text-muted); }
+        .log-msg { color: var(--text); word-break: break-all; }
+
+        .log-entry.reload {
+            background: rgba(139,92,246,0.08);
+            border-left: 3px solid var(--primary);
+        }
+        .log-entry.reload .log-msg { color: var(--primary); font-weight: 600; }
+
+        .log-toolbar {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .log-toolbar button {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            font-family: 'Outfit', sans-serif;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.2s;
+        }
+        .log-toolbar button:hover { color: var(--text); border-color: var(--primary); }
+
+        .log-count { color: var(--text-muted); font-size: 0.8rem; }
+
+        /* Refresh Button */
+        .refresh-btn {
+            background: linear-gradient(135deg, var(--primary), #6d28d9);
+            border: none; color: white;
+            padding: 0.5rem 1.2rem; border-radius: 8px;
+            font-family: 'Outfit', sans-serif; font-weight: 600;
+            cursor: pointer; font-size: 0.85rem;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .refresh-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 16px var(--primary-glow);
+        }
+        .refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container { padding: 1rem; }
+            header { padding: 0.8rem 1rem; }
+            .stats-row { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        /* Extension Repository Popup Modal Overlay */
+        .repo-modal-backdrop {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            background: rgba(0, 0, 0, 0.75) !important;
+            backdrop-filter: blur(10px) !important;
+            -webkit-backdrop-filter: blur(10px) !important;
+            z-index: 99999 !important;
+            display: flex !important;
+            justify-content: center !important;
+            align-items: center !important;
+            padding: 1rem !important;
+            box-sizing: border-box !important;
+        }
+
+        .repo-modal-backdrop[style*="display: none"] {
+            display: none !important;
+        }
+
+        .repo-modal-content {
+            background: #121020 !important;
+            border: 1px solid rgba(139, 92, 246, 0.3) !important;
+            border-radius: 16px !important;
+            width: 100% !important;
+            max-width: 580px !important;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), 0 0 30px rgba(139, 92, 246, 0.2) !important;
+            overflow: hidden !important;
+            animation: popupModalAnim 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        }
+
+        @keyframes popupModalAnim {
+            from { opacity: 0; transform: scale(0.92) translateY(-20px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        .repo-modal-header {
+            padding: 1rem 1.25rem !important;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+            display: flex !important;
+            justify-content: space-between !important;
+            align-items: center !important;
+            background: rgba(255, 255, 255, 0.03) !important;
+        }
+
+        .repo-modal-header h3 {
+            font-size: 1.1rem !important;
+            font-weight: 700 !important;
+            color: #f3f4f6 !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 0.5rem !important;
+            margin: 0 !important;
+        }
+
+        .repo-modal-close {
+            background: rgba(255, 255, 255, 0.05) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            color: #9ca3af !important;
+            width: 32px !important;
+            height: 32px !important;
+            border-radius: 50% !important;
+            font-size: 1.2rem !important;
+            cursor: pointer !important;
+            display: flex !important;
+            justify-content: center !important;
+            align-items: center !important;
+            transition: all 0.2s ease !important;
+        }
+
+        .repo-modal-close:hover {
+            background: rgba(239, 68, 68, 0.2) !important;
+            color: #ef4444 !important;
+            border-color: rgba(239, 68, 68, 0.4) !important;
+        }
+
+        .repo-modal-body {
+            padding: 1.25rem !important;
+        }
+
+        .repo-add-box {
+            background: rgba(255, 255, 255, 0.03) !important;
+            border: 1px solid rgba(255, 255, 255, 0.08) !important;
+            border-radius: 12px !important;
+            padding: 1rem !important;
+        }
+
+        .preset-chip {
+            background: rgba(139, 92, 246, 0.15) !important;
+            border: 1px solid rgba(139, 92, 246, 0.3) !important;
+            color: #e5e7eb !important;
+            font-size: 0.75rem !important;
+            padding: 0.3rem 0.6rem !important;
+            border-radius: 6px !important;
+            cursor: pointer !important;
+            margin-right: 0.3rem !important;
+            margin-top: 0.3rem !important;
+            transition: all 0.2s ease !important;
+        }
+
+        .preset-chip:hover {
+            background: #8b5cf6 !important;
+            color: #ffffff !important;
+            border-color: #8b5cf6 !important;
+        }
+
+        .repo-card {
+            background: rgba(255, 255, 255, 0.03) !important;
+            border: 1px solid rgba(255, 255, 255, 0.08) !important;
+            border-radius: 10px !important;
+            padding: 0.75rem 1rem !important;
+            display: flex !important;
+            justify-content: space-between !important;
+            align-items: center !important;
+            gap: 1rem !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="gradient-bg"></div>
+
+    <header>
+        <div class="logo">⚡ LightRunner <span>Dashboard</span></div>
+        <div class="header-status">
+            <div class="ws-status">
+                <div class="ws-dot" id="wsDot"></div>
+                <span id="wsLabel">Disconnected</span>
+            </div>
+            <button class="refresh-btn" onclick="openRepoModal()" style="background: linear-gradient(135deg, #10b981, #059669);"><i class="fa-solid fa-plus"></i> Add Repo</button>
+            <button class="refresh-btn" onclick="refreshHealth()" id="refreshBtn">Refresh</button>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Stats -->
+        <div class="stats-row" id="statsRow">
+            <div class="stat-card"><div class="stat-label">Total Extensions</div><div class="stat-value primary" id="statTotal">—</div></div>
+            <div class="stat-card"><div class="stat-label">Loaded</div><div class="stat-value success" id="statLoaded">—</div></div>
+            <div class="stat-card"><div class="stat-label">Errors</div><div class="stat-value error" id="statErrors">—</div></div>
+            <div class="stat-card"><div class="stat-label">WS Clients</div><div class="stat-value primary" id="statWS">—</div></div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('extensions')">Extensions</button>
+            <button class="tab-btn" onclick="switchTab('repos')">Repositories</button>
+            <button class="tab-btn" onclick="switchTab('logs')">Live Logs</button>
+        </div>
+
+        <!-- Extension Table Tab -->
+        <div class="tab-panel active" id="tab-extensions">
+            <table class="ext-table" id="extTable">
+                <thead>
+                    <tr>
+                        <th>Status</th>
+                        <th>Name</th>
+                        <th>Group</th>
+                        <th>Version</th>
+                        <th>Base URL</th>
+                        <th>File</th>
+                    </tr>
+                </thead>
+                <tbody id="extBody">
+                    <tr><td colspan="6" style="text-align:center;color:var(--text-muted)">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Repositories Tab -->
+        <div class="tab-panel" id="tab-repos">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h3 style="font-size: 1.1rem; font-weight: 700;">Extension Repositories</h3>
+                <div>
+                    <button class="refresh-btn" onclick="openRepoModal()" style="background: linear-gradient(135deg, #10b981, #059669); padding: 0.4rem 0.9rem;"><i class="fa-solid fa-plus"></i> Add Repo</button>
+                    <button class="refresh-btn" onclick="syncAllRepositories()" style="padding: 0.4rem 0.9rem;"><i class="fa-solid fa-rotate"></i> Sync All</button>
+                </div>
+            </div>
+            <div id="dash-repos-list" style="display: flex; flex-direction: column; gap: 0.8rem;">
+                <!-- Dynamically populated repo cards -->
+            </div>
+        </div>
+
+        <!-- Logs Tab -->
+        <div class="tab-panel" id="tab-logs">
+            <div class="log-toolbar">
+                <span class="log-count" id="logCount">0 entries</span>
+                <div>
+                    <button onclick="clearLogs()">Clear</button>
+                    <button onclick="toggleAutoScroll()" id="autoScrollBtn">Auto-scroll: ON</button>
+                </div>
+            </div>
+            <div class="log-console" id="logConsole"></div>
+        </div>
+    </div>
+
+    <script>
+        // --- State ---
+        let ws = null;
+        let autoScroll = true;
+        let logEntries = [];
+
+        // --- Tab Switching ---
+        function switchTab(name) {
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('tab-' + name).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        // --- Health Check ---
+        async function refreshHealth() {
+            const btn = document.getElementById('refreshBtn');
+            btn.disabled = true;
+            btn.textContent = 'Loading...';
+
+            try {
+                const res = await fetch('/api/health');
+                const data = await res.json();
+
+                document.getElementById('statTotal').textContent = data.summary.total;
+                document.getElementById('statLoaded').textContent = data.summary.loaded;
+                document.getElementById('statErrors').textContent = data.summary.errors;
+
+                if (data.websocket) {
+                    document.getElementById('statWS').textContent = data.websocket.connectedClients;
+                }
+
+                const tbody = document.getElementById('extBody');
+                tbody.innerHTML = '';
+
+                for (const ext of data.extensions) {
+                    const tr = document.createElement('tr');
+                    const nsfw = ext.isNsfw ? ' <span class="nsfw-tag">NSFW</span>' : '';
+                    tr.innerHTML = `
+                        <td><span class="status-badge ${ext.status}">${ext.status}</span></td>
+                        <td><strong>${ext.name || ext.fileName}</strong>${nsfw}</td>
+                        <td style="color:var(--text-muted)">${ext.group}</td>
+                        <td style="color:var(--text-muted)">${ext.version || '—'}</td>
+                        <td style="color:var(--text-muted);font-size:0.85rem">${ext.baseUrl || '—'}</td>
+                        <td style="color:var(--text-muted);font-size:0.85rem">${ext.fileName}</td>
+                    `;
+                    if (ext.error) {
+                        tr.title = ext.error;
+                    }
+                    tbody.appendChild(tr);
+                }
+            } catch (e) {
+                console.error('Health check failed:', e);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Refresh';
+            }
+        }
+
+        // --- WebSocket Connection ---
+        function connectWS() {
+            const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            ws = new WebSocket(protocol + '//' + location.host + '/ws/logs');
+
+            ws.onopen = () => {
+                document.getElementById('wsDot').classList.add('connected');
+                document.getElementById('wsLabel').textContent = 'Connected';
+            };
+
+            ws.onclose = () => {
+                document.getElementById('wsDot').classList.remove('connected');
+                document.getElementById('wsLabel').textContent = 'Disconnected';
+                // Auto-reconnect after 3s
+                setTimeout(connectWS, 3000);
+            };
+
+            ws.onerror = () => {
+                document.getElementById('wsDot').classList.remove('connected');
+                document.getElementById('wsLabel').textContent = 'Error';
+            };
+
+            ws.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    if (data.type === 'history') {
+                        for (const log of data.logs) {
+                            addLogEntry(log);
+                        }
+                    } else if (data.type === 'log') {
+                        addLogEntry(data);
+                    } else if (data.type === 'reload') {
+                        addLogEntry({
+                            type: 'reload',
+                            timestamp: data.timestamp,
+                            source: 'HotReload',
+                            level: 'info',
+                            message: `${data.event}: ${data.fileName} [${data.group}]`
+                        });
+                        // Auto-refresh health on reload
+                        refreshHealth();
+                    } else if (data.type === 'health') {
+                        refreshHealth();
+                    }
+                } catch (e) {
+                    console.error('WS message parse error:', e);
+                }
+            };
+        }
+
+        function addLogEntry(entry) {
+            logEntries.push(entry);
+            const console = document.getElementById('logConsole');
+
+            const div = document.createElement('div');
+            div.className = 'log-entry' + (entry.type === 'reload' ? ' reload' : '');
+
+            const time = entry.timestamp ? new Date(entry.timestamp).toLocaleTimeString() : '';
+            const level = entry.level || 'info';
+
+            div.innerHTML = `
+                <span class="log-time">${time}</span>
+                <span class="log-source">${entry.source || '—'}</span>
+                <span class="log-level ${level}">${level.toUpperCase()}</span>
+                <span class="log-msg">${escapeHtml(entry.message || '')}</span>
+            `;
+
+            console.appendChild(div);
+            document.getElementById('logCount').textContent = logEntries.length + ' entries';
+
+            if (autoScroll) {
+                console.scrollTop = console.scrollHeight;
+            }
+        }
+
+        function clearLogs() {
+            logEntries = [];
+            document.getElementById('logConsole').innerHTML = '';
+            document.getElementById('logCount').textContent = '0 entries';
+        }
+
+        function toggleAutoScroll() {
+            autoScroll = !autoScroll;
+            document.getElementById('autoScrollBtn').textContent = 'Auto-scroll: ' + (autoScroll ? 'ON' : 'OFF');
+        }
+
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        // --- Init ---
+        refreshHealth();
+        connectWS();
+    </script>
+
+    <!-- Extension Repositories Modal -->
+    <div id="repo-modal" class="repo-modal-backdrop" style="display: none;">
+        <div class="repo-modal-content">
+            <div class="repo-modal-header">
+                <h3 style="font-size: 1.1rem; font-weight: 700;"><i class="fa-solid fa-boxes-stacked" style="color: var(--primary);"></i> Extension Repositories</h3>
+                <button class="repo-modal-close" onclick="closeRepoModal()">&times;</button>
+            </div>
+            <div class="repo-modal-body">
+                <!-- Add New Repo Box -->
+                <div class="repo-add-box">
+                    <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 0.4rem; color: var(--text-color);">
+                        Add Repository URL (Mangayomi index.json / GitHub raw JS):
+                    </label>
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        <input type="text" id="repo-url-input" placeholder="e.g. https://raw.githubusercontent.com/.../index.json" style="flex: 1; min-width: 240px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: white; padding: 0.5rem 0.8rem; border-radius: 8px;">
+                        <button class="refresh-btn" onclick="submitAddRepo()" id="submit-repo-btn">
+                            <i class="fa-solid fa-cloud-arrow-down"></i> Add Repo
+                        </button>
+                    </div>
+                    <!-- Quick Preset Chips -->
+                    <div style="margin-top: 0.8rem;">
+                        <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; margin-right: 0.4rem;">Quick Presets:</span>
+                        <button class="preset-chip" onclick="fillPresetRepo('https://raw.githubusercontent.com/manga-download/mangayomi-extensions/main/index.json')">
+                            <i class="fa-brands fa-github"></i> Mangayomi Official Repo
+                        </button>
+                        <button class="preset-chip" onclick="fillPresetRepo('https://raw.githubusercontent.com/manga-download/mangayomi-extensions/main/anime_index.json')">
+                            <i class="fa-solid fa-tv"></i> Mangayomi Anime Index
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Installed Repositories List -->
+                <div style="margin-top: 1.2rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem;">
+                        <h4 style="font-size: 0.95rem; font-weight: 700;"><i class="fa-solid fa-layer-group"></i> Installed Repositories</h4>
+                        <button class="refresh-btn" onclick="syncAllRepositories()" style="font-size: 0.75rem; padding: 0.3rem 0.6rem; cursor: pointer;">
+                            <i class="fa-solid fa-rotate"></i> Sync All
+                        </button>
+                    </div>
+                    <div id="repo-list-container" style="max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.5rem;">
+                        <!-- Dynamically populated repo cards -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function openRepoModal() {
+            const modal = document.getElementById('repo-modal');
+            if (modal) modal.style.display = 'flex';
+            loadReposList();
+        }
+        function closeRepoModal() {
+            const modal = document.getElementById('repo-modal');
+            if (modal) modal.style.display = 'none';
+        }
+        function fillPresetRepo(url) {
+            document.getElementById('repo-url-input').value = url;
+        }
+        async function submitAddRepo() {
+            const input = document.getElementById('repo-url-input');
+            const btn = document.getElementById('submit-repo-btn');
+            const url = input ? input.value.trim() : '';
+            if (!url) return alert('Please enter a repository URL');
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Installing...';
+            try {
+                const res = await fetch('/api/repos/add', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Failed to add repo');
+                alert(`Successfully installed ${data.installedCount} extensions from repository!`);
+                input.value = '';
+                loadReposList();
+                refreshHealth();
+            } catch (err) {
+                alert('Error: ' + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-down"></i> Add Repo';
+            }
+        }
+        async function loadReposList() {
+            const container = document.getElementById('repo-list-container');
+            const dashContainer = document.getElementById('dash-repos-list');
+            try {
+                const res = await fetch('/api/repos');
+                const repos = await res.json();
+                
+                const html = (!repos || repos.length === 0)
+                    ? '<div style="color: var(--text-muted); font-size: 0.85rem; padding: 0.5rem; text-align: center;">No repositories added yet.</div>'
+                    : repos.map(r => `
+                        <div class="repo-card">
+                            <div>
+                                <div style="font-weight: 600; font-size: 0.9rem;">${escapeHtml(r.name || 'Repository')}</div>
+                                <div style="font-size: 0.75rem; color: var(--text-muted); font-family: monospace;">${escapeHtml(r.url)}</div>
+                                <div style="font-size: 0.75rem; color: var(--success); margin-top: 0.2rem;">
+                                    <i class="fa-solid fa-puzzle-piece"></i> ${r.extension_count || r.extensions?.length || 0} extensions installed
+                                </div>
+                            </div>
+                            <button onclick="deleteRepo('${escapeJsString(r.url)}')" style="background: rgba(239,68,68,0.2); border: 1px solid rgba(239,68,68,0.4); color: #f87171; padding: 0.3rem 0.6rem; border-radius: 6px; cursor: pointer; font-size: 0.8rem;">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </div>
+                    `).join('');
+
+                if (container) container.innerHTML = html;
+                if (dashContainer) dashContainer.innerHTML = html;
+            } catch (e) {
+                if (container) container.innerHTML = `<div style="color: var(--error); font-size: 0.8rem;">Failed to load repos: ${e.message}</div>`;
+            }
+        }
+        async function deleteRepo(url) {
+            if (!confirm('Are you sure you want to remove this repository and its installed extensions?')) return;
+            try {
+                const res = await fetch('/api/repos', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Failed to remove repo');
+                loadReposList();
+                refreshHealth();
+            } catch (e) {
+                alert('Error: ' + e.message);
+            }
+        }
+        async function syncAllRepositories() {
+            try {
+                const res = await fetch('/api/repos/sync', { method: 'POST' });
+                const data = await res.json();
+                alert('Repositories synchronized successfully!');
+                loadReposList();
+                refreshHealth();
+            } catch (e) {
+                alert('Sync error: ' + e.message);
+            }
+        }
+        function escapeJsString(str) {
+            return (str || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+        }
+    </script>
+</body>
+</html>

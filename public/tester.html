@@ -1,0 +1,1701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="referrer" content="no-referrer">
+    <title>Mangayomi Extension Playground</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Space+Grotesk:wght@400;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- HLS.js for .m3u8 streaming playback support in browsers -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <!-- Monaco Editor Requirements -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #0b0914;
+            --card-bg: rgba(18, 16, 32, 0.75);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --text-color: #f3f4f6;
+            --text-muted: #9ca3af;
+            --primary: #8b5cf6;
+            --primary-glow: rgba(139, 92, 246, 0.4);
+            --accent: #d946ef;
+            --accent-glow: rgba(217, 70, 239, 0.3);
+            --success: #10b981;
+            --error: #ef4444;
+            --warning: #f59e0b;
+            --glass-blur: blur(12px);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        body {
+            background: radial-gradient(circle at 50% 0%, #1c1535 0%, var(--bg-color) 70%);
+            color: var(--text-color);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        header {
+            background: rgba(11, 9, 20, 0.8);
+            backdrop-filter: var(--glass-blur);
+            border-bottom: 1px solid var(--border-color);
+            padding: 0.8rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10;
+        }
+
+        .logo {
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 700;
+            font-size: 1.3rem;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .logo i {
+            -webkit-text-fill-color: var(--primary);
+        }
+
+        .controls {
+            display: flex;
+            gap: 0.8rem;
+            align-items: center;
+        }
+
+        select, input, button {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            padding: 0.5rem 0.8rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        select:focus, input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 8px var(--primary-glow);
+        }
+
+        select {
+            cursor: pointer;
+            background-color: #121020;
+        }
+
+        .btn {
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            border: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px var(--primary-glow);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .btn-success {
+            background: var(--success);
+        }
+
+        .btn-success:hover {
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+        }
+
+        main {
+            flex-grow: 1;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            overflow: hidden;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .pane {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .pane-left {
+            border-right: 1px solid var(--border-color);
+        }
+
+        .pane-header {
+            background: rgba(255, 255, 255, 0.02);
+            padding: 0.6rem 1rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .pane-title {
+            font-weight: 600;
+            color: var(--text-color);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        #editor-container {
+            flex-grow: 1;
+            width: 100%;
+            height: 100%;
+            background: #1e1e1e;
+        }
+
+        /* Runner Panel Styling */
+        .runner-controls {
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.01);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.3rem;
+            flex-grow: 1;
+        }
+
+        .form-group label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+        }
+
+        /* Results Tabs */
+        .results-container {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background: rgba(11, 9, 20, 0.4);
+        }
+
+        .tab-bar {
+            background: rgba(255, 255, 255, 0.02);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            border-right: 1px solid var(--border-color);
+            color: var(--text-muted);
+            padding: 0.6rem 1.2rem;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            outline: none;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-color);
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .tab-btn.active {
+            color: var(--primary);
+            background: rgba(139, 92, 246, 0.08);
+            border-bottom: 2px solid var(--primary);
+            font-weight: 600;
+        }
+
+        .tab-content {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 1rem;
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Collapsible JSON Viewer CSS */
+        .json-tree {
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 0.85rem;
+            line-height: 1.5;
+            color: #d1d5db;
+            word-break: break-all;
+            white-space: pre-wrap;
+        }
+        .json-item {
+            margin-left: 1.2rem;
+        }
+        .json-key {
+            color: #c084fc;
+            font-weight: 600;
+        }
+        .json-value.string { color: #34d399; }
+        .json-value.number { color: #f59e0b; }
+        .json-value.boolean { color: #3b82f6; }
+        .json-value.null { color: #ef4444; }
+        .json-toggle {
+            cursor: pointer;
+            user-select: none;
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            display: inline-block;
+            width: 12px;
+            text-align: center;
+        }
+        .json-toggle:hover {
+            color: var(--text-color);
+        }
+
+        /* Anime Grid Renders */
+        .anime-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+            gap: 1rem;
+        }
+
+        .anime-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            overflow: hidden;
+            font-size: 0.8rem;
+            display: flex;
+            flex-direction: column;
+            transition: all 0.2s;
+        }
+
+        .anime-card:hover {
+            transform: scale(1.03);
+            border-color: var(--primary);
+        }
+
+        .anime-poster {
+            width: 100%;
+            aspect-ratio: 2/3;
+            object-fit: cover;
+            background: #121020;
+        }
+
+        .anime-info {
+            padding: 0.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.2rem;
+        }
+
+        .anime-title {
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .anime-link {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-overflow: ellipsis;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+
+        /* Video Player Stream tab */
+        .player-container {
+            width: 100%;
+            max-width: 640px;
+            margin: 0 auto;
+            aspect-ratio: 16/9;
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+
+        video {
+            width: 100%;
+            height: 100%;
+        }
+
+        .video-source-selector {
+            margin-top: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        /* Console Logs Panel */
+        .console-logs {
+            height: 120px;
+            min-height: 40px;
+            max-height: 80vh;
+            background: #06050b;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .console-logs .resize-handle {
+            height: 5px;
+            background: transparent;
+            cursor: ns-resize;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            transition: background 0.2s;
+        }
+
+        .console-logs .resize-handle:hover,
+        .console-logs .resize-handle.active {
+            background: var(--primary);
+        }
+
+        .console-header {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 0.4rem 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .console-terminal {
+            flex-grow: 1;
+            padding: 0.5rem 1rem;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 0.8rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .log-entry {
+            display: flex;
+            gap: 0.8rem;
+        }
+
+        .log-time {
+            color: var(--text-muted);
+            flex-shrink: 0;
+        }
+
+        .log-text {
+            word-break: break-all;
+            white-space: pre-wrap;
+        }
+
+        .log-text.info { color: #e5e7eb; }
+        .log-text.error { color: var(--error); font-weight: bold; }
+        .log-text.warning { color: var(--warning); }
+
+        .resize-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 99999;
+            cursor: ns-resize;
+            display: none;
+            background: transparent;
+        }
+
+        /* Extension Repository Popup Modal Overlay */
+        .repo-modal-backdrop {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            background: rgba(0, 0, 0, 0.75) !important;
+            backdrop-filter: blur(10px) !important;
+            -webkit-backdrop-filter: blur(10px) !important;
+            z-index: 99999 !important;
+            display: flex !important;
+            justify-content: center !important;
+            align-items: center !important;
+            padding: 1rem !important;
+            box-sizing: border-box !important;
+        }
+
+        .repo-modal-backdrop[style*="display: none"] {
+            display: none !important;
+        }
+
+        .repo-modal-content {
+            background: #121020 !important;
+            border: 1px solid rgba(139, 92, 246, 0.3) !important;
+            border-radius: 16px !important;
+            width: 100% !important;
+            max-width: 580px !important;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), 0 0 30px rgba(139, 92, 246, 0.2) !important;
+            overflow: hidden !important;
+            animation: popupModalAnim 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        }
+
+        @keyframes popupModalAnim {
+            from { opacity: 0; transform: scale(0.92) translateY(-20px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        .repo-modal-header {
+            padding: 1rem 1.25rem !important;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+            display: flex !important;
+            justify-content: space-between !important;
+            align-items: center !important;
+            background: rgba(255, 255, 255, 0.03) !important;
+        }
+
+        .repo-modal-header h3 {
+            font-size: 1.1rem !important;
+            font-weight: 700 !important;
+            color: #f3f4f6 !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 0.5rem !important;
+            margin: 0 !important;
+        }
+
+        .repo-modal-close {
+            background: rgba(255, 255, 255, 0.05) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            color: #9ca3af !important;
+            width: 32px !important;
+            height: 32px !important;
+            border-radius: 50% !important;
+            font-size: 1.2rem !important;
+            cursor: pointer !important;
+            display: flex !important;
+            justify-content: center !important;
+            align-items: center !important;
+            transition: all 0.2s ease !important;
+        }
+
+        .repo-modal-close:hover {
+            background: rgba(239, 68, 68, 0.2) !important;
+            color: #ef4444 !important;
+            border-color: rgba(239, 68, 68, 0.4) !important;
+        }
+
+        .repo-modal-body {
+            padding: 1.25rem !important;
+        }
+
+        .repo-add-box {
+            background: rgba(255, 255, 255, 0.03) !important;
+            border: 1px solid rgba(255, 255, 255, 0.08) !important;
+            border-radius: 12px !important;
+            padding: 1rem !important;
+        }
+
+        .preset-chip {
+            background: rgba(139, 92, 246, 0.15) !important;
+            border: 1px solid rgba(139, 92, 246, 0.3) !important;
+            color: #e5e7eb !important;
+            font-size: 0.75rem !important;
+            padding: 0.3rem 0.6rem !important;
+            border-radius: 6px !important;
+            cursor: pointer !important;
+            margin-right: 0.3rem !important;
+            margin-top: 0.3rem !important;
+            transition: all 0.2s ease !important;
+        }
+
+        .preset-chip:hover {
+            background: #8b5cf6 !important;
+            color: #ffffff !important;
+            border-color: #8b5cf6 !important;
+        }
+
+        .repo-card {
+            background: rgba(255, 255, 255, 0.03) !important;
+            border: 1px solid rgba(255, 255, 255, 0.08) !important;
+            border-radius: 10px !important;
+            padding: 0.75rem 1rem !important;
+            display: flex !important;
+            justify-content: space-between !important;
+            align-items: center !important;
+            gap: 1rem !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="resize-overlay" id="resize-overlay"></div>
+
+    <header>
+        <div class="logo">
+            <i class="fa-solid fa-flask"></i> Mangayomi Extension Playground
+        </div>
+        <div class="controls">
+            <select id="group-select">
+                <option value="development">🛠️ Development (TEST)</option>
+                <option value="repository">📦 Repositories</option>
+                <option value="prod-safe">✅ Production (Safe)</option>
+                <option value="prod-nsfw">🔞 Production (NSFW)</option>
+                <option value="prod-real">📺 Production (Players)</option>
+            </select>
+            <select id="source-select" style="min-width: 180px;">
+                <option value="">Loading sources...</option>
+            </select>
+            <button id="add-repo-btn" class="btn btn-primary" onclick="openRepoModal()" style="background: linear-gradient(135deg, #10b981, #059669);" title="Add Extension Repository (+ Repo)">
+                <i class="fa-solid fa-plus"></i> Add Repo
+            </button>
+            <button id="reload-cache-btn" class="btn btn-secondary" title="Reload Scanner Cache">
+                <i class="fa-solid fa-rotate"></i> Reload
+            </button>
+        </div>
+    </header>
+
+    <main>
+        <!-- Left Pane: Code Editor -->
+        <div class="pane pane-left">
+            <div class="pane-header">
+                <div class="pane-title"><i class="fa-solid fa-code"></i> <span id="file-title">No file loaded</span></div>
+                <button id="save-btn" class="btn btn-success" disabled>
+                    <i class="fa-solid fa-floppy-disk"></i> Save Code
+                </button>
+            </div>
+            <div id="editor-container"></div>
+        </div>
+
+        <!-- Right Pane: Service Executor & Results -->
+        <div class="pane">
+            <div class="runner-controls">
+                <div class="form-row">
+                    <div class="form-group" style="max-width: 200px;">
+                        <label for="action-select">Test Method</label>
+                        <select id="action-select">
+                            <option value="getPopular">getPopular(page)</option>
+                            <option value="getLatestUpdates">getLatestUpdates(page)</option>
+                            <option value="search">search(query, page, filters)</option>
+                            <option value="getDetail">getDetail(url)</option>
+                            <option value="getVideoList">getVideoList(url)</option>
+                            <option value="getFilterList">getFilterList()</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="input-page-group">
+                        <label for="input-page">Page</label>
+                        <input type="number" id="input-page" value="1" min="1">
+                    </div>
+                    <div class="form-group" id="input-query-group" style="display: none;">
+                        <label for="input-query">Query</label>
+                        <input type="text" id="input-query" placeholder="Search query...">
+                    </div>
+                    <div class="form-group" id="input-url-group" style="display: none;">
+                        <label for="input-url">URL</label>
+                        <input type="text" id="input-url" placeholder="Scraped detail/video url...">
+                    </div>
+                    <div style="align-self: flex-end;">
+                        <button id="execute-btn" class="btn btn-primary" style="height: 35px; width: 100px; justify-content: center;">
+                            <i class="fa-solid fa-play"></i> Run
+                        </button>
+                    </div>
+                </div>
+                <!-- Dynamic Filters Container (hidden by default) -->
+                <div id="dynamic-filters-box" style="display: none; border-top: 1px solid var(--border-color); padding-top: 0.5rem;">
+                    <div style="font-size: 0.75rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.3rem; text-transform: uppercase;">
+                        Extension Filters
+                    </div>
+                    <div id="filters-form" style="display: flex; flex-wrap: wrap; gap: 0.8rem;"></div>
+                </div>
+            </div>
+
+            <div class="results-container">
+                <div class="tab-bar">
+                    <button class="tab-btn active" data-tab="json-tab">JSON Output</button>
+                    <button class="tab-btn" data-tab="visual-tab">Visual Grid</button>
+                    <button class="tab-btn" data-tab="player-tab">Stream Player</button>
+                    <span style="margin-left: auto; align-self: center; margin-right: 1rem; font-size: 0.75rem; color: var(--text-muted);" id="execution-time-label"></span>
+                </div>
+
+                <div id="json-tab" class="tab-content active">
+                    <div class="json-tree" id="json-result-container">No outputs yet. Click "Run" to test.</div>
+                </div>
+
+                <div id="visual-tab" class="tab-content">
+                    <div class="anime-grid" id="visual-result-container">
+                        <div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 2rem;">
+                            No listing results. Perform getPopular, getLatestUpdates, or search to preview grid.
+                        </div>
+                    </div>
+                </div>
+
+                <div id="player-tab" class="tab-content">
+                    <div class="player-container">
+                        <video id="video-element" controls></video>
+                    </div>
+                    <div class="video-source-selector" id="video-source-box" style="display: none;">
+                        <div style="font-size: 0.75rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase;">
+                            Select Stream Quality / Host
+                        </div>
+                        <select id="video-url-select" style="width: 100%;"></select>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Bottom Pane: Console logs -->
+    <div class="console-logs">
+        <div class="resize-handle" id="console-resize-handle"></div>
+        <div class="console-header">
+            <div style="display: flex; align-items: center; gap: 0.8rem;">
+                <span><i class="fa-solid fa-terminal"></i> Console Logs</span>
+                <span id="ws-status-badge" style="font-size: 0.7rem; color: var(--text-muted); display: inline-flex; align-items: center; gap: 0.3rem;">
+                    <span id="ws-dot" style="width: 6px; height: 6px; border-radius: 50%; background: var(--error);"></span>
+                    <span id="ws-text">Disconnected</span>
+                </span>
+            </div>
+            <button id="clear-logs-btn" style="background: none; border: none; color: var(--text-muted); cursor: pointer;" title="Clear console">
+                <i class="fa-solid fa-trash-can"></i> Clear
+            </button>
+        </div>
+        <div class="console-terminal" id="console-terminal-box">
+            <div style="color: var(--text-muted); font-style: italic;">No logs yet. Execute script to view console.log events.</div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin;
+
+        // Monaco configuration
+        let editorInstance = null;
+        let activeSource = null;
+        let loadedSourcesList = [];
+        let originalCode = "";
+
+        require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.39.0/min/vs' }});
+        require(['vs/editor/editor.main'], function() {
+            editorInstance = monaco.editor.create(document.getElementById('editor-container'), {
+                value: "// Select an extension to edit code...",
+                language: 'javascript',
+                theme: 'vs-dark',
+                automaticLayout: true,
+                minimap: { enabled: false },
+                fontSize: 13,
+                fontFamily: 'Consolas, Menlo, "Courier New", monospace'
+            });
+
+            // Handle keyboard save shortcut (Ctrl+S / Cmd+S)
+            editorInstance.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, function() {
+                saveCode();
+            });
+
+            // Initialize app sources after Monaco loads
+            initApp();
+        });
+
+        // DOM elements
+        const groupSelect = document.getElementById('group-select');
+        const sourceSelect = document.getElementById('source-select');
+        const reloadCacheBtn = document.getElementById('reload-cache-btn');
+        const fileTitle = document.getElementById('file-title');
+        const saveBtn = document.getElementById('save-btn');
+        const actionSelect = document.getElementById('action-select');
+        const inputPageGroup = document.getElementById('input-page-group');
+        const inputQueryGroup = document.getElementById('input-query-group');
+        const inputUrlGroup = document.getElementById('input-url-group');
+        const inputPage = document.getElementById('input-page');
+        const inputQuery = document.getElementById('input-query');
+        const inputUrl = document.getElementById('input-url');
+        const executeBtn = document.getElementById('execute-btn');
+        const jsonResultContainer = document.getElementById('json-result-container');
+        const visualResultContainer = document.getElementById('visual-result-container');
+        const videoElement = document.getElementById('video-element');
+        const videoSourceBox = document.getElementById('video-source-box');
+        const videoUrlSelect = document.getElementById('video-url-select');
+        const consoleTerminalBox = document.getElementById('console-terminal-box');
+        const clearLogsBtn = document.getElementById('clear-logs-btn');
+        const executionTimeLabel = document.getElementById('execution-time-label');
+        const dynamicFiltersBox = document.getElementById('dynamic-filters-box');
+        const filtersForm = document.getElementById('filters-form');
+
+        // Setup tabs
+        document.querySelectorAll('.tab-bar .tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tab-bar .tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                btn.classList.add('active');
+                document.getElementById(btn.getAttribute('data-tab')).classList.add('active');
+            });
+        });
+
+        // Event listeners
+        groupSelect.addEventListener('change', () => filterSourcesByGroup());
+        sourceSelect.addEventListener('change', () => loadCodeForSelectedSource());
+        reloadCacheBtn.addEventListener('click', () => reloadCache());
+        saveBtn.addEventListener('click', () => saveCode());
+        clearLogsBtn.addEventListener('click', () => { consoleTerminalBox.innerHTML = ''; });
+        executeBtn.addEventListener('click', () => executeTest());
+
+        actionSelect.addEventListener('change', () => {
+            const val = actionSelect.value;
+            inputPageGroup.style.display = (val === 'getPopular' || val === 'getLatestUpdates' || val === 'search') ? 'block' : 'none';
+            inputQueryGroup.style.display = (val === 'search') ? 'block' : 'none';
+            inputUrlGroup.style.display = (val === 'getDetail' || val === 'getVideoList') ? 'block' : 'none';
+            dynamicFiltersBox.style.display = (val === 'search' && filtersForm.children.length > 0) ? 'block' : 'none';
+        });
+
+        async function initApp() {
+            await fetchSources();
+        }
+
+        async function fetchSources(preserveSelection = false) {
+            try {
+                const res = await fetch(`${API_BASE}/api/test/sources`);
+                loadedSourcesList = await res.json();
+                filterSourcesByGroup(preserveSelection);
+            } catch (e) {
+                logConsole('error', `Failed to load sources from server: ${e.message}`);
+            }
+        }
+
+        function filterSourcesByGroup(preserveSelection = false) {
+            const selectedGroup = groupSelect.value;
+            const filtered = loadedSourcesList.filter(s => s.group === selectedGroup);
+            const currentSourceId = sourceSelect.value;
+            
+            if (filtered.length === 0) {
+                sourceSelect.innerHTML = `<option value="">No sources in this group</option>`;
+                editorInstance.setValue("// No extension selected.");
+                saveBtn.disabled = true;
+                fileTitle.innerText = "No file loaded";
+                activeSource = null;
+                filtersForm.innerHTML = '';
+                dynamicFiltersBox.style.display = 'none';
+                return;
+            }
+
+            sourceSelect.innerHTML = filtered.map(s => 
+                `<option value="${s.id}">${s.name} (${s.lang.toUpperCase()})</option>`
+            ).join('');
+
+            if (preserveSelection && currentSourceId && filtered.some(s => s.id == currentSourceId)) {
+                sourceSelect.value = currentSourceId;
+            } else {
+                loadCodeForSelectedSource();
+            }
+        }
+
+        async function loadCodeForSelectedSource() {
+            const group = groupSelect.value;
+            const sourceId = sourceSelect.value;
+            if (!sourceId) return;
+
+            const sourceObj = loadedSourcesList.find(s => s.id == sourceId && s.group === group);
+            if (!sourceObj) return;
+
+            activeSource = sourceObj;
+            fileTitle.innerText = `${sourceObj.fileName} (${sourceObj.group})`;
+            saveBtn.disabled = true;
+            resetRunnerOutputs();
+
+            try {
+                const res = await fetch(`${API_BASE}/api/test/code?group=${group}&source=${sourceObj.id}`);
+                const data = await res.json();
+                editorInstance.setValue(data.code);
+                originalCode = data.code;
+                
+                // Watch for edits to enable save button
+                editorInstance.onDidChangeModelContent(() => {
+                    const currentVal = editorInstance.getValue();
+                    saveBtn.disabled = (currentVal === originalCode);
+                });
+
+                // Pre-fetch filters schema for search action UI
+                fetchFiltersSchema(group, sourceObj.id);
+            } catch (e) {
+                logConsole('error', `Failed to load code: ${e.message}`);
+            }
+        }
+
+        async function fetchFiltersSchema(group, sourceId) {
+            filtersForm.innerHTML = '';
+            dynamicFiltersBox.style.display = 'none';
+            try {
+                const res = await fetch(`${API_BASE}/api/test/run`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        group,
+                        source: sourceId,
+                        action: 'getFilterList',
+                        params: {}
+                    })
+                });
+                const data = await res.json();
+                if (data.success && data.result && Array.from(data.result).length > 0) {
+                    renderFilterFields(data.result);
+                }
+            } catch (e) {
+                console.warn("Failed to pre-fetch filter schema:", e);
+            }
+        }
+
+        function renderFilterFields(filtersList) {
+            filtersForm.innerHTML = '';
+            let count = 0;
+            filtersList.forEach((filter, index) => {
+                // We support standard SelectFilter and checkbox filters for simplicity
+                if (filter.typeName === 'SelectFilter') {
+                    count++;
+                    const group = document.createElement('div');
+                    group.className = 'form-group';
+                    group.style.maxWidth = '150px';
+                    group.style.minWidth = '120px';
+                    group.innerHTML = `
+                        <label>${filter.name}</label>
+                        <select data-filter-index="${index}" data-type="SelectFilter">
+                            ${filter.values.map((v, i) => `<option value="${i}">${v.name || v}</option>`).join('')}
+                        </select>
+                    `;
+                    filtersForm.appendChild(group);
+                } else if (filter.typeName === 'CheckBoxFilter' || filter.typeName === 'TriStateFilter') {
+                    count++;
+                    const group = document.createElement('div');
+                    group.className = 'form-group';
+                    group.style.flexDirection = 'row';
+                    group.style.alignItems = 'center';
+                    group.style.gap = '0.5rem';
+                    group.innerHTML = `
+                        <input type="checkbox" id="filter-${index}" data-filter-index="${index}" data-type="CheckBoxFilter" style="width: auto;">
+                        <label for="filter-${index}" style="margin: 0; cursor: pointer;">${filter.name}</label>
+                    `;
+                    filtersForm.appendChild(group);
+                }
+            });
+
+            if (count > 0) {
+                if (actionSelect.value === 'search') {
+                    dynamicFiltersBox.style.display = 'block';
+                }
+            }
+        }
+
+        function resetRunnerOutputs() {
+            // Stop and destroy HLS instance if playing
+            if (window.hlsInstance) {
+                try { window.hlsInstance.destroy(); } catch (e) {}
+                window.hlsInstance = null;
+            }
+            // Stop video element
+            if (videoElement) {
+                videoElement.pause();
+                videoElement.removeAttribute('src');
+                while (videoElement.firstChild) {
+                    videoElement.removeChild(videoElement.firstChild);
+                }
+                videoElement.load();
+            }
+            // Hide stream quality dropdown
+            if (videoSourceBox) {
+                videoSourceBox.style.display = 'none';
+                videoUrlSelect.innerHTML = '';
+            }
+            // Hide web player button
+            const origBtn = document.getElementById('open-orig-btn');
+            if (origBtn) {
+                origBtn.style.display = 'none';
+            }
+
+            // Reset Output Containers
+            if (jsonResultContainer) {
+                jsonResultContainer.innerHTML = 'No outputs yet. Click "Run" to test.';
+            }
+            if (visualResultContainer) {
+                visualResultContainer.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 2rem;">No listing results. Perform getPopular, getLatestUpdates, or search to preview grid.</div>';
+            }
+            if (executionTimeLabel) {
+                executionTimeLabel.innerText = '';
+            }
+
+            // Reset Action & Inputs to default state
+            if (actionSelect) {
+                actionSelect.value = 'getPopular';
+                inputPageGroup.style.display = 'block';
+                inputQueryGroup.style.display = 'none';
+                inputUrlGroup.style.display = 'none';
+                dynamicFiltersBox.style.display = 'none';
+            }
+            if (inputPage) inputPage.value = '1';
+            if (inputQuery) inputQuery.value = '';
+            if (inputUrl) inputUrl.value = '';
+
+            // Reset Result Tabs back to default JSON Output tab
+            document.querySelectorAll('.tab-bar .tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            const defaultTabBtn = document.querySelector('.tab-bar .tab-btn[data-tab="json-tab"]');
+            if (defaultTabBtn) defaultTabBtn.classList.add('active');
+            const defaultTabContent = document.getElementById('json-tab');
+            if (defaultTabContent) defaultTabContent.classList.add('active');
+        }
+
+        async function reloadCache() {
+            const icon = reloadCacheBtn.querySelector('i');
+            if (icon) icon.classList.add('fa-spin');
+            reloadCacheBtn.disabled = true;
+
+            logConsole('info', "Refreshing scan folders cache on server...");
+            try {
+                const res = await fetch(`${API_BASE}/api/refresh`, { method: 'POST' });
+                const data = await res.json();
+                logConsole('info', data.message || "Cache reloaded successfully.");
+                resetRunnerOutputs();
+                await fetchSources(true);
+            } catch (e) {
+                logConsole('error', `Failed to reload cache: ${e.message}`);
+            } finally {
+                if (icon) icon.classList.remove('fa-spin');
+                reloadCacheBtn.disabled = false;
+            }
+        }
+
+        async function saveCode() {
+            if (!activeSource) return;
+            const group = groupSelect.value;
+            const code = editorInstance.getValue();
+
+            logConsole('info', `Saving updated code for ${activeSource.name}...`);
+            try {
+                const res = await fetch(`${API_BASE}/api/test/code`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        group,
+                        source: activeSource.id,
+                        code
+                    })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    logConsole('info', `Successfully saved extension code.`);
+                    originalCode = code;
+                    saveBtn.disabled = true;
+                    // Refetch filters schema in case the code changes them
+                    fetchFiltersSchema(group, activeSource.id);
+                } else {
+                    logConsole('error', `Save failed: ${data.error}`);
+                }
+            } catch (e) {
+                logConsole('error', `Failed to save code to server: ${e.message}`);
+            }
+        }
+
+        async function executeTest() {
+            if (!activeSource) {
+                alert("Please select a source first!");
+                return;
+            }
+
+            const group = groupSelect.value;
+            const sourceId = activeSource.id;
+            const action = actionSelect.value;
+            
+            // Build parameters
+            const params = {};
+            if (action === 'getPopular' || action === 'getLatestUpdates' || action === 'search') {
+                params.page = parseInt(inputPage.value || '1', 10);
+            }
+            if (action === 'search') {
+                params.query = inputQuery.value || '';
+                // Gather dynamic filter outputs
+                const filters = [];
+                // Collect values from the filter form
+                const selectEl = filtersForm.querySelectorAll('select[data-filter-index]');
+                selectEl.forEach(el => {
+                    const idx = parseInt(el.getAttribute('data-filter-index'), 10);
+                    filters.push({
+                        type: "SelectFilter",
+                        name: "",
+                        state: parseInt(el.value, 10),
+                        values: [],
+                        typeName: "SelectFilter"
+                    });
+                });
+                const checkEl = filtersForm.querySelectorAll('input[type="checkbox"][data-filter-index]');
+                checkEl.forEach(el => {
+                    const idx = parseInt(el.getAttribute('data-filter-index'), 10);
+                    filters.push({
+                        type: "CheckBoxFilter",
+                        name: "",
+                        state: el.checked,
+                        typeName: "CheckBoxFilter"
+                    });
+                });
+                params.filters = filters;
+            }
+            if (action === 'getDetail' || action === 'getVideoList') {
+                params.url = inputUrl.value;
+                if (!params.url) {
+                    alert("Please enter a URL parameter!");
+                    return;
+                }
+            }
+
+            logConsole('info', `Executing action '${action}' on '${activeSource.name}'...`);
+            executeBtn.disabled = true;
+            executeBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Running`;
+            executionTimeLabel.innerText = "Running...";
+
+            try {
+                const res = await fetch(`${API_BASE}/api/test/run`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        group,
+                        source: sourceId,
+                        action,
+                        params
+                    })
+                });
+                const data = await res.json();
+                
+                // Write VM logs to console panel
+                if (data.logs && data.logs.length > 0) {
+                    data.logs.forEach(log => logConsole(log.level, log.message, log.time));
+                }
+
+                if (data.success) {
+                    logConsole('info', `Execution success. Time elapsed: ${data.executionTimeMs}ms`);
+                    executionTimeLabel.innerText = `${data.executionTimeMs}ms`;
+                    
+                    // Render outputs
+                    renderJsonView(data.result);
+                    renderVisualView(action, data.result);
+                } else {
+                    logConsole('error', `Execution failed: ${data.error}`);
+                    executionTimeLabel.innerText = "FAILED";
+                    jsonResultContainer.innerHTML = `<div style="color: var(--error);">${data.error}</div>`;
+                }
+            } catch (e) {
+                logConsole('error', `Network error during execute: ${e.message}`);
+                executionTimeLabel.innerText = "ERROR";
+            } finally {
+                executeBtn.disabled = false;
+                executeBtn.innerHTML = `<i class="fa-solid fa-play"></i> Run`;
+            }
+        }
+
+        // WebSocket live log connection
+        let logWs = null;
+
+        function connectWS() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws/logs`;
+
+            try {
+                logWs = new WebSocket(wsUrl);
+
+                logWs.onopen = () => {
+                    const wsDot = document.getElementById('ws-dot');
+                    const wsText = document.getElementById('ws-text');
+                    if (wsDot) wsDot.style.background = 'var(--success)';
+                    if (wsText) wsText.textContent = 'Live WS';
+                };
+
+                logWs.onclose = () => {
+                    const wsDot = document.getElementById('ws-dot');
+                    const wsText = document.getElementById('ws-text');
+                    if (wsDot) wsDot.style.background = 'var(--error)';
+                    if (wsText) wsText.textContent = 'Offline';
+                    setTimeout(connectWS, 3000);
+                };
+
+                logWs.onerror = () => {
+                    const wsDot = document.getElementById('ws-dot');
+                    const wsText = document.getElementById('ws-text');
+                    if (wsDot) wsDot.style.background = 'var(--error)';
+                    if (wsText) wsText.textContent = 'Error';
+                };
+
+                logWs.onmessage = (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
+                        if (data.type === 'log') {
+                            const srcTag = data.source ? `[${data.source}] ` : '';
+                            logConsole(data.level || 'info', `${srcTag}${data.message}`, data.timestamp ? new Date(data.timestamp).toLocaleTimeString() : null, false);
+                        } else if (data.type === 'reload') {
+                            logConsole('info', `[HotReload] ${data.event}: ${data.fileName} [${data.group}]`, new Date(data.timestamp).toLocaleTimeString(), false);
+                            // Auto-refresh sources dropdown dynamically when extensions are added or modified
+                            fetchSources(true);
+                        }
+                    } catch (e) {
+                        console.error('WS message error:', e);
+                    }
+                };
+            } catch (e) {
+                console.error('Failed to initiate WebSocket connection:', e);
+            }
+        }
+
+        // Output formatting helpers
+        function escapeHtml(str) {
+            if (!str) return '';
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        function logConsole(level, text, timestamp, broadcast = true) {
+            const time = timestamp || new Date().toLocaleTimeString();
+
+            // Clear placeholder text if present
+            if (consoleTerminalBox.innerText.includes('No logs yet')) {
+                consoleTerminalBox.innerHTML = '';
+            }
+
+            const div = document.createElement('div');
+            div.className = 'log-entry';
+            div.innerHTML = `
+                <span class="log-time">[${time}]</span>
+                <span class="log-text ${level}">${escapeHtml(text)}</span>
+            `;
+            consoleTerminalBox.appendChild(div);
+            consoleTerminalBox.scrollTop = consoleTerminalBox.scrollHeight;
+
+            if (broadcast && logWs && logWs.readyState === WebSocket.OPEN) {
+                try {
+                    logWs.send(JSON.stringify({
+                        type: 'log',
+                        source: `Tester (${activeSource?.name || 'Client'})`,
+                        level,
+                        message: text
+                    }));
+                } catch (e) {
+                    // Ignore broadcast error
+                }
+            }
+        }
+
+        function renderJsonView(obj) {
+            jsonResultContainer.innerHTML = '';
+            const tree = document.createElement('div');
+            tree.className = 'json-tree';
+            renderJsonNode(obj, tree, "");
+            jsonResultContainer.appendChild(tree);
+        }
+
+        function renderJsonNode(val, parentEl, key = "") {
+            const item = document.createElement('div');
+            item.className = 'json-item';
+            
+            let prefix = "";
+            if (key) {
+                prefix = `<span class="json-key">"${key}":</span> `;
+            }
+
+            if (val === null) {
+                item.innerHTML = `${prefix}<span class="json-value null">null</span>`;
+                parentEl.appendChild(item);
+            } else if (typeof val === 'object') {
+                const isArray = Array.isArray(val);
+                const openChar = isArray ? "[" : "{";
+                const closeChar = isArray ? "]" : "}";
+                const count = isArray ? val.length : Object.keys(val).length;
+                
+                const header = document.createElement('span');
+                header.innerHTML = `${prefix}<span class="json-toggle">-</span> ${openChar} <span style="color: var(--text-muted); font-size: 0.75rem;">${count} items</span>`;
+                item.appendChild(header);
+
+                const childrenContainer = document.createElement('div');
+                childrenContainer.style.display = 'block';
+                item.appendChild(childrenContainer);
+
+                const footer = document.createElement('div');
+                footer.innerHTML = closeChar;
+                item.appendChild(footer);
+
+                // Add toggle behavior
+                const toggle = header.querySelector('.json-toggle');
+                toggle.addEventListener('click', () => {
+                    if (childrenContainer.style.display === 'block') {
+                        childrenContainer.style.display = 'none';
+                        toggle.innerText = "+";
+                    } else {
+                        childrenContainer.style.display = 'block';
+                        toggle.innerText = "-";
+                    }
+                });
+
+                // Recursive render
+                if (isArray) {
+                    val.forEach((child, i) => renderJsonNode(child, childrenContainer, ""));
+                } else {
+                    for (const [k, v] of Object.entries(val)) {
+                        renderJsonNode(v, childrenContainer, k);
+                    }
+                }
+
+                parentEl.appendChild(item);
+            } else {
+                const type = typeof val;
+                const displayVal = type === 'string' ? `"${val}"` : val;
+                item.innerHTML = `${prefix}<span class="json-value ${type}">${displayVal}</span>`;
+                parentEl.appendChild(item);
+            }
+        }
+
+        function renderVisualView(action, result) {
+            visualResultContainer.innerHTML = '';
+            videoSourceBox.style.display = 'none';
+            videoElement.src = '';
+            videoUrlSelect.innerHTML = '';
+            
+            // Clean HLS instance if any
+            if (window.hlsInstance) {
+                window.hlsInstance.destroy();
+                window.hlsInstance = null;
+            }
+
+            if (action === 'getPopular' || action === 'getLatestUpdates' || action === 'search') {
+                const items = result?.list || result || [];
+                if (items.length === 0) {
+                    visualResultContainer.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 2rem;">No items found in result array.</div>`;
+                    return;
+                }
+                
+                items.forEach(item => {
+                    const card = document.createElement('div');
+                    card.className = 'anime-card';
+
+                    const img = document.createElement('img');
+                    img.className = 'anime-poster';
+                    img.alt = item.name || '';
+                    img.referrerPolicy = 'no-referrer';
+                    img.src = item.imageUrl || '';
+                    img.onerror = function() {
+                        if (!this.dataset.proxied) {
+                            this.dataset.proxied = 'true';
+                            this.src = '/api/proxy-image?url=' + encodeURIComponent(item.imageUrl || '');
+                        }
+                    };
+
+                    const info = document.createElement('div');
+                    info.className = 'anime-info';
+                    info.innerHTML = `
+                        <div class="anime-title" title="${item.name}">${item.name}</div>
+                        <div class="anime-link" title="${item.link || item.url || item.href}">${item.link || item.url || item.href}</div>
+                    `;
+
+                    card.appendChild(img);
+                    card.appendChild(info);
+                    card.addEventListener('click', () => {
+                        const targetUrl = item.link || item.url || item.href;
+                        // Autofill input URL for convenience!
+                        inputUrl.value = targetUrl;
+                        actionSelect.value = 'getDetail';
+                        actionSelect.dispatchEvent(new Event('change'));
+                        // Switch back to JSON view tab to view details
+                        document.querySelector('.tab-bar [data-tab="json-tab"]').click();
+                        logConsole('info', `Autofilled URL input with item link: ${targetUrl}. Execute getDetail next.`);
+                    });
+                    visualResultContainer.appendChild(card);
+                });
+            } else if (action === 'getDetail') {
+                // If it's a detail object, show episode list
+                const episodes = result?.episodes || result?.chapters || [];
+                if (episodes.length === 0) {
+                    visualResultContainer.innerHTML = `<div style="color: var(--text-muted); padding: 2rem;">No chapters or episodes found.</div>`;
+                    return;
+                }
+                
+                const box = document.createElement('div');
+                box.style.display = 'flex';
+                box.style.flexDirection = 'column';
+                box.style.gap = '0.5rem';
+                
+                const title = document.createElement('h3');
+                title.innerText = `Episodes / Chapters (${episodes.length})`;
+                title.style.marginBottom = '0.5rem';
+                box.appendChild(title);
+
+                episodes.forEach(ep => {
+                    const btn = document.createElement('button');
+                    const targetEpUrl = ep.url || ep.link || ep.href;
+                    btn.className = 'btn btn-secondary';
+                    btn.style.textAlign = 'left';
+                    btn.style.width = '100%';
+                    btn.innerHTML = `<i class="fa-solid fa-play"></i> <strong>${ep.name}</strong> <span style="font-size:0.75rem; color:var(--text-muted); margin-left:1rem;">${targetEpUrl}</span>`;
+                    btn.addEventListener('click', () => {
+                        inputUrl.value = targetEpUrl;
+                        actionSelect.value = 'getVideoList';
+                        actionSelect.dispatchEvent(new Event('change'));
+                        // Execute getVideoList immediately
+                        executeTest();
+                        // Open player tab
+                        document.querySelector('.tab-bar [data-tab="player-tab"]').click();
+                    });
+                    box.appendChild(btn);
+                });
+
+                visualResultContainer.appendChild(box);
+            } else if (action === 'getVideoList') {
+                const videos = Array.isArray(result) ? result : [];
+                if (videos.length === 0) {
+                    visualResultContainer.innerHTML = `<div style="color: var(--text-muted); padding: 2rem;">No video streams found.</div>`;
+                    return;
+                }
+
+                // Render video source selectors
+                videoSourceBox.style.display = 'block';
+                videoUrlSelect.innerHTML = videos.map((v, i) => 
+                    `<option value="${i}">${v.quality} (${v.url.substring(0, 50)}...)</option>`
+                ).join('');
+
+                videoUrlSelect.onchange = () => {
+                    const selectedIndex = videoUrlSelect.value;
+                    const videoObj = videos[selectedIndex];
+                    if (videoObj) {
+                        if (origBtn && videoObj.originalUrl) {
+                            origBtn.href = videoObj.originalUrl;
+                        }
+                        playVideoStream(videoObj);
+                    }
+                };
+
+                // Add direct original URL button helper if available
+                let origBtn = videoSourceBox.querySelector('#open-orig-btn');
+                if (!origBtn) {
+                    origBtn = document.createElement('a');
+                    origBtn.id = 'open-orig-btn';
+                    origBtn.target = '_blank';
+                    origBtn.className = 'btn btn-secondary';
+                    origBtn.style.marginTop = '0.5rem';
+                    origBtn.style.fontSize = '0.8rem';
+                    origBtn.style.display = 'inline-flex';
+                    origBtn.innerHTML = `<i class="fa-solid fa-arrow-up-right-from-square"></i> Open Web Player (Original URL)`;
+                    videoSourceBox.appendChild(origBtn);
+                }
+                if (videos[0]?.originalUrl) {
+                    origBtn.href = videos[0].originalUrl;
+                    origBtn.style.display = 'inline-flex';
+                } else {
+                    origBtn.style.display = 'none';
+                }
+
+                // Play the first video by default
+                playVideoStream(videos[0]);
+            } else {
+                visualResultContainer.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 2rem;">Grid preview is not available for action '${action}'.</div>`;
+            }
+        }
+
+        function playVideoStream(videoObj) {
+            const url = videoObj.url;
+            const headers = videoObj.headers;
+            const subtitles = videoObj.subtitles;
+            const referer = headers?.Referer || headers?.referer || 'https://anizone.to/';
+
+            const streamUrl = `${API_BASE}/api/proxy/video?url=${encodeURIComponent(url)}&referer=${encodeURIComponent(referer)}`;
+            logConsole('info', `Mounting video stream via proxy: ${streamUrl}`);
+            
+            // Clear any existing track elements
+            while (videoElement.firstChild) {
+                videoElement.removeChild(videoElement.firstChild);
+            }
+
+            // If subtitles exist, add track elements
+            if (subtitles && Array.isArray(subtitles)) {
+                subtitles.forEach((sub, index) => {
+                    const track = document.createElement('track');
+                    track.kind = 'subtitles';
+                    track.label = sub.label || `Subtitle ${index + 1}`;
+                    track.srclang = sub.label ? sub.label.substring(0, 2).toLowerCase() : 'en';
+                    track.src = sub.file;
+                    if (index === 0) {
+                        track.default = true;
+                    }
+                    videoElement.appendChild(track);
+                });
+                logConsole('info', `Added ${subtitles.length} subtitle tracks: ${subtitles.map(s => s.label).join(', ')}`);
+            }
+            
+            // Check if it's HLS (.m3u8)
+            const isHls = url.includes('.m3u8') || url.includes('manifest');
+
+            if (isHls && typeof Hls !== 'undefined' && Hls.isSupported()) {
+                if (window.hlsInstance) {
+                    window.hlsInstance.destroy();
+                }
+                const hls = new Hls();
+                window.hlsInstance = hls;
+                hls.loadSource(streamUrl);
+                hls.attachMedia(videoElement);
+                hls.on(Hls.Events.MANIFEST_PARSED, function() {
+                    videoElement.play().catch(e => logConsole('warning', `Autoplay prevented: ${e.message}`));
+                });
+                hls.on(Hls.Events.ERROR, function(event, data) {
+                    if (data.fatal) {
+                        logConsole('error', `HLS Playback fatal error: ${data.type}`);
+                    }
+                });
+            } else {
+                videoElement.src = streamUrl;
+                videoElement.load();
+                videoElement.play().catch(e => {
+                    logConsole('warning', `Direct playback error: ${e.message}`);
+                });
+            }
+        }
+
+        // Resizable Console Panel logic
+        (function() {
+            const consoleLogs = document.querySelector('.console-logs');
+            const resizeHandle = document.getElementById('console-resize-handle');
+            const resizeOverlay = document.getElementById('resize-overlay');
+            
+            let isResizing = false;
+            let startY = 0;
+            let startHeight = 0;
+
+            resizeHandle.addEventListener('mousedown', (e) => {
+                isResizing = true;
+                startY = e.clientY;
+                startHeight = consoleLogs.offsetHeight;
+                resizeHandle.classList.add('active');
+                if (resizeOverlay) {
+                    resizeOverlay.style.display = 'block';
+                }
+                document.body.style.cursor = 'ns-resize';
+                document.body.style.userSelect = 'none';
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isResizing) return;
+                const diffY = startY - e.clientY;
+                const newHeight = startHeight + diffY;
+                if (newHeight >= 40 && newHeight <= window.innerHeight * 0.8) {
+                    consoleLogs.style.height = `${newHeight}px`;
+                }
+            });
+
+            const stopResizing = () => {
+                if (isResizing) {
+                    isResizing = false;
+                    resizeHandle.classList.remove('active');
+                    if (resizeOverlay) {
+                        resizeOverlay.style.display = 'none';
+                    }
+                    document.body.style.cursor = 'default';
+                    document.body.style.userSelect = 'auto';
+                }
+            };
+
+            window.addEventListener('mouseup', stopResizing, true);
+            window.addEventListener('blur', stopResizing);
+        })();
+
+        // Initialize WebSocket log connection
+        connectWS();
+    </script>
+
+    <!-- Extension Repositories Modal -->
+    <div id="repo-modal" class="repo-modal-backdrop" style="display: none;">
+        <div class="repo-modal-content">
+            <div class="repo-modal-header">
+                <h3 style="font-size: 1.1rem; font-weight: 700;"><i class="fa-solid fa-boxes-stacked" style="color: var(--primary);"></i> Extension Repositories</h3>
+                <button class="repo-modal-close" onclick="closeRepoModal()">&times;</button>
+            </div>
+            <div class="repo-modal-body">
+                <!-- Add New Repo Box -->
+                <div class="repo-add-box">
+                    <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 0.4rem; color: var(--text-color);">
+                        Add Repository URL (Mangayomi index.json / GitHub raw JS):
+                    </label>
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        <input type="text" id="repo-url-input" placeholder="e.g. https://raw.githubusercontent.com/.../index.json" style="flex: 1; min-width: 240px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: white; padding: 0.5rem 0.8rem; border-radius: 8px;">
+                        <button class="btn btn-primary" onclick="submitAddRepo()" id="submit-repo-btn">
+                            <i class="fa-solid fa-cloud-arrow-down"></i> Add Repo
+                        </button>
+                    </div>
+                    <!-- Quick Preset Chips -->
+                    <div style="margin-top: 0.8rem;">
+                        <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; margin-right: 0.4rem;">Quick Presets:</span>
+                        <button class="preset-chip" onclick="fillPresetRepo('https://raw.githubusercontent.com/manga-download/mangayomi-extensions/main/index.json')">
+                            <i class="fa-brands fa-github"></i> Mangayomi Official Repo
+                        </button>
+                        <button class="preset-chip" onclick="fillPresetRepo('https://raw.githubusercontent.com/manga-download/mangayomi-extensions/main/anime_index.json')">
+                            <i class="fa-solid fa-tv"></i> Mangayomi Anime Index
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Installed Repositories List -->
+                <div style="margin-top: 1.2rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem;">
+                        <h4 style="font-size: 0.95rem; font-weight: 700;"><i class="fa-solid fa-layer-group"></i> Installed Repositories</h4>
+                        <button class="btn btn-secondary" onclick="syncAllRepositories()" style="font-size: 0.75rem; padding: 0.3rem 0.6rem; cursor: pointer;">
+                            <i class="fa-solid fa-rotate"></i> Sync All
+                        </button>
+                    </div>
+                    <div id="repo-list-container" style="max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.5rem;">
+                        <!-- Dynamically populated repo cards -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function openRepoModal() {
+            const modal = document.getElementById('repo-modal');
+            if (modal) modal.style.display = 'flex';
+            loadReposList();
+        }
+        function closeRepoModal() {
+            const modal = document.getElementById('repo-modal');
+            if (modal) modal.style.display = 'none';
+        }
+        function fillPresetRepo(url) {
+            document.getElementById('repo-url-input').value = url;
+        }
+        async function submitAddRepo() {
+            const input = document.getElementById('repo-url-input');
+            const btn = document.getElementById('submit-repo-btn');
+            const url = input ? input.value.trim() : '';
+            if (!url) return alert('Please enter a repository URL');
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Installing...';
+            try {
+                const res = await fetch('/api/repos/add', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Failed to add repo');
+                alert(`Successfully installed ${data.installedCount} extensions from repository!`);
+                input.value = '';
+                loadReposList();
+                if (typeof fetchSources === 'function') await fetchSources();
+            } catch (err) {
+                alert('Error: ' + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-down"></i> Add Repo';
+            }
+        }
+        async function loadReposList() {
+            const container = document.getElementById('repo-list-container');
+            if (!container) return;
+            try {
+                const res = await fetch('/api/repos');
+                const repos = await res.json();
+                if (!repos || repos.length === 0) {
+                    container.innerHTML = '<div style="color: var(--text-muted); font-size: 0.85rem; padding: 0.5rem; text-align: center;">No repositories added yet.</div>';
+                    return;
+                }
+                container.innerHTML = repos.map(r => `
+                    <div class="repo-card">
+                        <div>
+                            <div style="font-weight: 600; font-size: 0.9rem;">${escapeHtml(r.name || 'Repository')}</div>
+                            <div style="font-size: 0.75rem; color: var(--text-muted); font-family: monospace;">${escapeHtml(r.url)}</div>
+                            <div style="font-size: 0.75rem; color: var(--success); margin-top: 0.2rem;">
+                                <i class="fa-solid fa-puzzle-piece"></i> ${r.extension_count || r.extensions?.length || 0} extensions installed
+                            </div>
+                        </div>
+                        <button onclick="deleteRepo('${escapeJsString(r.url)}')" style="background: rgba(239,68,68,0.2); border: 1px solid rgba(239,68,68,0.4); color: #f87171; padding: 0.3rem 0.6rem; border-radius: 6px; cursor: pointer; font-size: 0.8rem;">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </div>
+                `).join('');
+            } catch (e) {
+                container.innerHTML = `<div style="color: var(--error); font-size: 0.8rem;">Failed to load repos: ${e.message}</div>`;
+            }
+        }
+        async function deleteRepo(url) {
+            if (!confirm('Are you sure you want to remove this repository and its installed extensions?')) return;
+            try {
+                const res = await fetch('/api/repos', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Failed to remove repo');
+                loadReposList();
+                if (typeof fetchSources === 'function') await fetchSources();
+                if (typeof loadSources === 'function') await loadSources();
+            } catch (e) {
+                alert('Error: ' + e.message);
+            }
+        }
+        async function syncAllRepositories() {
+            try {
+                const res = await fetch('/api/repos/sync', { method: 'POST' });
+                const data = await res.json();
+                alert('Repositories synchronized successfully!');
+                loadReposList();
+                if (typeof fetchSources === 'function') await fetchSources();
+                if (typeof loadSources === 'function') await loadSources();
+            } catch (e) {
+                alert('Sync error: ' + e.message);
+            }
+        }
+        function escapeJsString(str) {
+            return (str || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+        }
+    </script>
+</body>
+</html>

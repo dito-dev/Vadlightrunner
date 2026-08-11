@@ -1,0 +1,21 @@
+# Render Blueprint Specification for VadLightrunner Backend
+# https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: vadlightrunner
+    runtime: node
+    plan: free
+    region: oregon
+    buildCommand: npm install --omit=dev
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+    disk:
+      name: vadlightrunner-data
+      mountPath: ./data
+      sizeGB: 1
